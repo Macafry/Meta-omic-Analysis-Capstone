@@ -1,0 +1,365 @@
+---
+title: "Analysis of Immune Deficiency RNA-Seq Data"
+author: W. Evan Johnson, Ph.D.
+date: "`r Sys.Date()`"
+header-includes:
+   - \usepackage{amsmath}
+output:
+  html_document:
+    code_folding: show
+    toc: true
+    toc_float: true
+    theme: "flatly"
+editor_options: 
+  chunk_output_type: console
+tables: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# load required libraries
+library(Rsubread)
+library(Rsamtools)
+library(SummarizedExperiment)
+library(edgeR)
+library(DESeq2)
+library(ComplexHeatmap)
+library(TBSignatureProfiler)
+library(umap)
+library(tidyverse)
+library(DT)
+library(GSVA)
+library(enrichR)
+
+# define pathway libraries
+dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
+```
+
+
+### Read in dataset
+```{r}
+
+# read RNA expression counts
+counts <- read.table("features_combined.txt", sep="\t", 
+                     header=T, row.names=1)
+# read patient data
+meta_data <- read.table("meta_data.txt", sep="\t", 
+                     header=T, row.names=1)
+
+# isolate group indicator variable
+group <- meta_data$Condition
+
+# aggregate patient and expression data into a single object
+se_immunedef <- SummarizedExperiment(assays=list(counts=counts),
+                     colData = meta_data)
+
+# create counts per million, log counts and log counts per million features 
+# and save them into new assays.
+se_immunedef <- mkAssay(se_immunedef, log = TRUE, counts_to_CPM = TRUE)
+
+# display all assays
+assays(se_immunedef)
+```
+
+### Visualization and Dimension reduction {.tabset}
+
+#### PCA
+
+```{r}
+# fit PCA model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+pca_out <- prcomp(t(assay(se_immunedef,"log_counts_cpm")))
+
+# define dataframe with PCA components and immune deficiency condition (IDC)
+pca_plot <- as.data.frame(pca_out$x) # X, Y, ...
+pca_plot$Condition <- as.factor(se_immunedef$Condition) # color/group
+
+# plot PC1 and PC2 by IDC
+g <- pca_plot %>% ggplot(aes(x=PC1, y=PC2, color=Condition)) +
+  geom_point(size=1.5) + xlab("PCA1") + ylab("PCA2") +
+  geom_text(label=colnames(se_immunedef), nudge_y = 5,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("PCA Plot")
+
+plot(g)
+```
+
+#### UMAP
+
+```{r}
+# fit UMAP model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+umap.defaults$n_neighbors=5
+umap_out <- umap(t(assay(se_immunedef,"log_counts_cpm")), config = umap.defaults)
+
+# define dataframe with UMAP dimensions and IDC
+umap_plot <- as.data.frame(umap_out$layout) # X, Y, ...
+umap_plot$Condition <- as.factor(se_immunedef$Condition) # color / group
+
+# plot UMAP1 and UMAP2 by IDC
+g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=Condition)) +
+  geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
+  geom_text(label=colnames(se_immunedef), nudge_y = 0.1,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("UMAP Plot")
+
+plot(g)
+```
+
+
+
+### Differential Expression {.tabset}
+
+#### DESeq2 Analysis
+```{r}
+# format data into a DESeq2-friendly Data Structure
+dds <- DESeqDataSetFromMatrix(countData = counts, colData=meta_data, design=~Condition)
+#colData is a data frame of demographic/phenotypic data
+
+# filter for genes with significant expression  
+# expression should be > 0, but > 100 should be better
+dds<-dds[rowSums(counts(dds))>1,] #Gene Filtering
+
+# fit negative binomial regression
+dds<-DESeq(dds) #Performs estimation of size factors,dispersion, and negative binomial GLM f#itting
+
+# extracting results, ordering them by adjusted p-value
+res <- results(dds)[order(results(dds)[,6]),]
+#res[1:10,]
+
+# dislpay results for the top 1000 most significant genes
+datatable(data.frame(res[1:1000,]))
+
+# store the name of the top 250 most significant genes
+deseq250 <- rownames(res)[1:250]
+``` 
+
+#### Heatmap of DEGs (DESeq2)
+
+```{r}
+# Make a Heatmap of DEGs
+
+# rownames(results(dds)[order(results(dds)$padj),]) # get the name of the genes ordered by adjusted p-val
+# as.matrix(assay(se_immunedef,"log_counts_cpm")) # convert log cpm to a matrix structure
+# All together: extract the log cpm of the top 250 genes and store that in a matrix
+mat = as.matrix(assay(se_immunedef,"log_counts_cpm"))[rownames(results(dds)[order(results(dds)$padj),])[1:250],] # Using first 500 genes to simplify
+
+# normalize data row-wise
+mat = t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df=data.frame(Condition=colData(se_immunedef)$Condition) 
+
+# create HeatMap with some annotations
+ha = HeatmapAnnotation(df = df, col = list(Condition=c("Deficient"="Red","Control"="Blue")))
+Heatmap(mat,show_row_names=F,show_column_names = F, top_annotation = ha)
+
+```
+
+
+#### Limma Analysis
+
+```{r}
+# Store data in Limma-friendly Data Structure
+dge <- DGEList(counts=counts, group=group) #From edgeR, Computes library size
+
+# filter for genes with significant expression
+counts<-counts[which(rowSums(cpm(counts))>1),] #Gene Filtering #(mask)
+dge <- DGEList(counts=counts, group=group) #Re-compute library size #(filter)
+
+# Trimmed-Mean Normalization of data
+dge <- calcNormFactors(dge) #TMM normalization
+
+# Create design matrix (intercept + indicator variable)
+design<-model.matrix(~group)
+
+# distribution normalizing transformation
+v<-voom(dge, design) #voom transform to calculate weights to eliminate mean-variance #relationship
+#use usual limma pipelines
+
+# fit empirical bayes regression model
+fit<-lmFit(v,design)
+fit<-eBayes(fit)
+
+# organize data by top ranked genes when predicting IDC (coef = col#2 = IDC)
+topTable(fit, coef=ncol(design))
+
+# display top 1000 most significant genes
+datatable(topTable(fit, coef=ncol(design), number=1000))
+
+# store the name of the top 250 most significant genes
+limma250 <- rownames(topTable(fit, coef=ncol(design), number=250))
+```
+
+#### Heatmap of DEGs (limma)
+
+```{r}
+# Make a Heatmap of DEGs
+
+# rownames(topTable(fit, coef=ncol(design), number=50)) # get the name of the top 50 most significant genes
+# as.matrix(assay(se_immunedef,"log_counts_cpm")) # convert log cpm to a matrix structure
+# All together: extract the log cpm of the top 50 genes and store that in a matrix
+mat = as.matrix(assay(se_immunedef,"log_counts_cpm"))[rownames(topTable(fit, coef=ncol(design), number=50)),] # Using first 500 genes to simplify
+
+# normalize data row-wise
+mat = t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df=data.frame(Condition=colData(se_immunedef)$Condition) 
+
+# create HeatMap with some annotations
+ha = HeatmapAnnotation(df = df, col = list(Condition=c("Deficient"="Red","Control"="Blue")))
+Heatmap(mat,show_row_names=T,show_column_names = F, top_annotation = ha)
+```
+
+
+
+
+### Pathway analysis {.tabset}
+
+#### Fetch C7 immune genesets
+
+```{r, eval=F}
+library(msigdbr)
+
+# retrieve immune-related gene sets from the Molecular Signatures Database
+immune_gene_sets = msigdbr(species = "human", category = "C7", subcategory = "IMMUNESIGDB")
+
+# extract the pathway names (no dupliactes)
+path_names <- unique(immune_gene_sets$gs_name)
+length(path_names) # pathway count
+
+# function to get all the gene names belonging to a specific pathway
+get_genes<- function(pname, sets){sets %>% filter(gs_name==pname) %>% pull(gene_symbol)}
+
+# create a list of pathways as keys and vector of belonging genes as values
+C7_pathlist <- sapply(path_names, get_genes, sets)
+
+# save list
+saveRDS(C7_pathlist, file="mSigDB_C7.rds")
+```
+
+
+#### Score C7 Immune pathways
+```{r}
+# load list containing immune-related pathways as keys
+# and vectors of the immune-related genes belonging to that pathway
+C7_pathlist <- readRDS(file="mSigDB_C7.rds")
+
+library(GSVA)
+
+# package data into GSVA-friendly format:
+#  - genes x patient log cpm expression measures
+#  - gene pathway data
+gsvaPar <- gsvaParam(assay(se_immunedef,"log_counts_cpm"), C7_pathlist)
+
+# run GSVA (Gene Set Variation Analysis) 
+# computing enrichment scores per sample for each immune-related pathway
+# result: matrix of pathway x patient enrichment scores
+gsvaRes <- gsva(gsvaPar, verbose=FALSE)
+```
+
+#### Limma Analysis
+
+```{r}
+# Create design matrix (intercept + indicator variable)
+design<-model.matrix(~group)
+
+# fit empirical bayes regression model
+#relationship
+#use usual limma pipelines
+fit<-lmFit(gsvaRes,design)
+fit<-eBayes(fit)
+
+# organize data by top ranked pathways when predicting IDC (coef = col#2 = IDC)
+topTable(fit, coef=ncol(design))
+
+# display top 100 ranked pathways when predicting IDC
+datatable(topTable(fit, coef=ncol(design), number=1000))
+```
+
+#### Heatmap of DEGs (limma)
+
+```{r}
+# rownames(topTable(fit, coef=ncol(design), number=250)) # get the name of the top 250 most significant pathways
+# as.matrix(gsvaRes) # convert enrichment scores to a matrix structure
+# All together: extract the enrichment scores of the top 250 pathways and store that in a matrix
+
+# Make a Heatmap of DEGs
+mat = as.matrix(gsvaRes)[rownames(topTable(fit, coef=ncol(design), number=250)),] # Using first 500 genes to simplify
+
+# normalize data row-wise
+mat = t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df=data.frame(Condition=colData(se_immunedef)$Condition) 
+
+# create HeatMap with some annotations
+ha = HeatmapAnnotation(df = df, col = list(Condition=c("Deficient"="Red","Control"="Blue")))
+Heatmap(mat,show_row_names=F,show_column_names = F, top_annotation = ha)
+
+```
+ 
+#### EnrichR analysis {.tabset}
+
+##### DESeq2 Genes {.tabset}
+ 
+```{r}
+# based on the results of DESeq, cross-reference the gene with pathway databases to infer which pathways are the most significant
+a <- enrichr(deseq250, dbs)
+
+# next code-chunks: display the results of each database cross-referencing
+```
+
+
+###### DESeq2 WikiPathways
+```{r}
+datatable(enriched$WikiPathways_2016)
+```
+
+###### DESeq2 KEGG
+```{r}
+datatable(enriched$KEGG_2016)
+```
+
+###### DESeq2 Panther
+```{r}
+datatable(enriched$Panther_2016)
+```
+
+###### DESeq2 Reactome
+```{r}
+datatable(enriched$Reactome_2016)
+```
+
+##### Limma Genes {.tabset}
+ 
+```{r}
+# based on the results of limma, cross-reference the gene with pathway databases to infer which pathways are the most significant
+enriched <- enrichr(limma250, dbs)
+
+# next code-chunks: display the results of each database cross-referencing
+```
+
+###### Limma WikiPathways
+```{r}
+datatable(enriched$WikiPathways_2016)
+```
+
+###### Limma KEGG
+```{r}
+datatable(enriched$KEGG_2016)
+```
+
+###### Limma Panther
+```{r}
+datatable(enriched$Panther_2016)
+```
+
+###### Limma Reactome
+```{r}
+datatable(enriched$Reactome_2016)
+```
