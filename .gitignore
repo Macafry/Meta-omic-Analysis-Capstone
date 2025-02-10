@@ -1,0 +1,5 @@
+*.txt
+*.rds
+*.Rdata
+.Rhistory
+analysis_de_count_PJ02_analysis.R

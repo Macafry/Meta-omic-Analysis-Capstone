@@ -1,0 +1,418 @@
+---
+title: "Analysis of Immune Deficiency RNA-Seq Data"
+author: W. Evan Johnson, Ph.D., Ian Mc Farlane, Bram Stults
+date: "`r Sys.Date()`"
+header-includes:
+   - \usepackage{amsmath}
+output:
+  html_document:
+    code_folding: show
+    toc: true
+    toc_float: true
+    theme: "flatly"
+editor_options: 
+  chunk_output_type: console
+tables: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# load required libraries
+library(Rsubread)
+library(Rsamtools)
+library(SummarizedExperiment)
+library(edgeR)
+library(DESeq2)
+library(ComplexHeatmap)
+library(TBSignatureProfiler)
+library(umap)
+library(tidyverse)
+library(DT)
+library(GSVA)
+library(enrichR)
+
+# define pathway libraries
+dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
+```
+
+
+### Read in dataset
+```{r}
+
+# read RNA expression counts and patient data
+load(file="readMatrix_PBMC_BulkRNAseq_CVID.Rdata")
+
+# "unpack" the results
+counts <- mt.counts
+meta_data <- sample.info
+
+
+# isolate group indicator variable
+group <- meta_data$disease
+
+# aggregate patient and expression data into a single object
+se_cvid <- SummarizedExperiment(assays=list(counts=counts),
+                     colData = meta_data)
+
+# create counts per million, log counts and log counts per million features 
+# and save them into new assays.
+se_cvid <- mkAssay(se_cvid, log = TRUE, counts_to_CPM = TRUE)
+
+# display all assays
+assays(se_cvid)
+```
+
+### Visualization and Dimension reduction {.tabset}
+
+#### PCA
+
+```{r}
+# fit PCA model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+pca_out <- prcomp(t(assay(se_cvid,"log_counts_cpm")))
+
+# define dataframe with PCA components and immune deficiency disease (IDC)
+pca_plot <- as.data.frame(pca_out$x) # X, Y, ...
+pca_plot$disease <- as.factor(se_cvid$disease) # color/group
+
+# plot PC1 and PC2 by IDC
+g <- pca_plot %>% ggplot(aes(x=PC1, y=PC2, color=disease)) +
+  geom_point(size=1.5) + xlab("PCA1") + ylab("PCA2") +
+  geom_text(label=colnames(se_cvid), nudge_y = 5,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("PCA Plot")
+
+plot(g)
+```
+
+#### UMAP
+
+```{r}
+# fit UMAP model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+umap.defaults$n_neighbors=5
+umap_out <- umap(t(assay(se_cvid,"log_counts_cpm")), config=umap.defaults)
+
+# define dataframe with UMAP dimensions and IDC
+umap_plot <- as.data.frame(umap_out$layout) # X, Y, ...
+umap_plot$disease <- as.factor(se_cvid$disease) # color / group
+
+# plot UMAP1 and UMAP2 by IDC
+g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=disease)) +
+  geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
+  geom_text(label=colnames(se_cvid), nudge_y = 0.1,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("UMAP Plot")
+
+plot(g)
+```
+
+#### PCA (Treatment)
+
+```{r}
+# fit PCA model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+pca_out <- prcomp(t(assay(se_cvid,"log_counts_cpm")))
+
+# define dataframe with PCA components and immune deficiency disease (IDC)
+pca_plot <- as.data.frame(pca_out$x) # X, Y, ...
+pca_plot$treatment <- as.factor(se_cvid$treatment) # color/group
+
+# plot PC1 and PC2 by IDC
+g <- pca_plot %>% ggplot(aes(x=PC1, y=PC2, color=treatment)) +
+  geom_point(size=1.5) + xlab("PCA1") + ylab("PCA2") +
+  geom_text(label=colnames(se_cvid), nudge_y = 5,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("PCA Plot")
+
+plot(g)
+```
+
+#### UMAP (Treatment)
+```{r}
+# fit UMAP model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+umap.defaults$n_neighbors=5
+umap_out <- umap(t(assay(se_cvid,"log_counts_cpm")), config=umap.defaults)
+
+# define dataframe with UMAP dimensions and IDC
+umap_plot <- as.data.frame(umap_out$layout) # X, Y, ...
+umap_plot$treatment <- as.factor(se_cvid$treatment) # color / group
+
+# plot UMAP1 and UMAP2 by IDC
+g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=treatment)) +
+  geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
+  geom_text(label=colnames(se_cvid), nudge_y = 0.1,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("UMAP Plot")
+
+plot(g)
+```
+
+
+### Differential Expression {.tabset}
+
+
+#### DESeq2 Analysis 
+```{r message=FALSE}
+# format data into a DESeq2-friendly Data Structure
+dds <- DESeqDataSetFromMatrix(countData=counts, colData=meta_data, design=~disease)
+#colData is a data frame of demographic/phenotypic data
+
+# filter for genes with significant expression  
+# expression should be > 0, but > 100 should be better
+dds<-dds[rowSums(counts(dds))>1,] #Gene Filtering
+
+# fit negative binomial regression
+dds<-DESeq(dds) #Performs estimation of size factors,dispersion, and negative binomial GLM f#itting
+
+# extracting results, ordering them by adjusted p-value
+res <- results(dds)[order(results(dds)[,6]),]
+#res[1:10,]
+
+# dislpay results for the top 1000 most significant genes
+datatable(data.frame(res[1:1000,]))
+
+# store the name of the top 250 most significant genes
+deseq250 <- rownames(res)[1:250]
+``` 
+
+
+
+#### Heatmap of DEGs (DESeq2)
+
+```{r}
+# Make a Heatmap of DEGs
+
+# All together: extract the log cpm of the top 250 genes and store that in a matrix
+# # get the name of the genes ordered by adjusted p-val
+top_genes = rownames(results(dds)[order(results(dds)$padj),])[1:250]
+# # convert log cpm to a matrix structure sorted by the top genes
+mat = as.matrix(assay(se_cvid,"log_counts_cpm"))[top_genes,] 
+
+# normalize data row-wise
+mat = t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df=data.frame(disease=colData(se_cvid)$disease) 
+
+# create HeatMap with some annotations
+ha_colors = list(disease=c("healthy"="Blue","CVID"="Red", 
+                             "UCVID"="Green", "NCVID"="Brown"))
+
+ha = HeatmapAnnotation(df = df, col = ha_colors)
+Heatmap(mat,show_row_names=F,show_column_names = F, top_annotation=ha)
+
+```
+
+  
+#### Limma Analysis {.tabset}
+
+```{r}
+# collapse data into healthy or not
+
+# Store data in Limma-friendly Data Structure
+dge <- DGEList(counts=counts, group=group) #From edgeR, Computes library size
+
+# filter for genes with significant expression
+counts<-counts[which(rowSums(cpm(counts))>1),] #Gene Filtering #(mask)
+dge <- DGEList(counts=counts, group=group) #Re-compute library size #(filter)
+
+# Trimmed-Mean Normalization of data
+dge <- calcNormFactors(dge) #TMM normalization
+
+# Create design matrix (intercept + indicator variable)
+
+design<-model.matrix(~group)
+
+# distribution normalizing transformation
+v<-voom(dge, design) #voom transform to calculate weights to eliminate mean-variance #relationship
+#use usual limma pipelines
+
+# fit empirical bayes regression model
+fit<-lmFit(v,design)
+fit<-eBayes(fit)
+
+
+```
+
+
+
+##### UCVID
+```{r}
+# organize data by top ranked genes when predicting IDC (coef = col#2 = UCVID)
+# topTable(fit, coef=2)
+
+# display top 1000 most significant genes
+datatable(topTable(fit, coef=2, number=1000))
+
+# store the name of the top 250 most significant genes
+limma250_UCVID <- rownames(topTable(fit, coef=2, number=250))
+```
+
+
+##### CVID
+```{r}
+# organize data by top ranked genes when predicting IDC (coef = col#3 = CVID)
+# topTable(fit, coef=3)
+
+# display top 1000 most significant genes
+datatable(topTable(fit, coef=3, number=1000))
+
+# store the name of the top 250 most significant genes
+limma250_CVID <- rownames(topTable(fit, coef=3, number=250))
+```
+
+
+##### NCVID
+```{r}
+# organize data by top ranked genes when predicting IDC (coef = col#3 = NCVID)
+# topTable(fit, coef=4)
+
+# display top 1000 most significant genes
+datatable(topTable(fit, coef=4, number=1000))
+
+# store the name of the top 250 most significant genes
+limma250_NCVID <- rownames(topTable(fit, coef=4, number=250))
+```
+
+#### Heatmap of DEGs {.tabset}
+
+##### UCVID
+
+```{r}
+# Make a Heatmap of DEGs
+
+# extract the log cpm of the top 250 genes and store that in a matrix
+# get the name of the top 250 most significant genes
+top_genes = rownames(topTable(fit, coef=2, number=250))
+# convert log cpm to a matrix structure
+mat = as.matrix(assay(se_cvid,"log_counts_cpm"))[top_genes,] 
+
+# normalize data row-wise
+mat = t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df=data.frame(disease=colData(se_cvid)$disease) 
+
+# create HeatMap with some annotations
+ha = HeatmapAnnotation(df = df, col=ha_colors)
+Heatmap(mat,show_row_names=F,show_column_names=F, top_annotation=ha)
+```
+
+##### CVID
+
+```{r}
+# Make a Heatmap of DEGs
+
+# extract the log cpm of the top 250 genes and store that in a matrix
+# get the name of the top 250 most significant genes
+top_genes = rownames(topTable(fit, coef=3, number=250))
+# convert log cpm to a matrix structure
+mat = as.matrix(assay(se_cvid,"log_counts_cpm"))[top_genes,] 
+
+# normalize data row-wise
+mat = t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df=data.frame(disease=colData(se_cvid)$disease) 
+
+# create HeatMap with some annotations
+ha = HeatmapAnnotation(df = df, col=ha_colors)
+Heatmap(mat,show_row_names=F,show_column_names=F, top_annotation=ha)
+```
+
+##### NCVID
+
+```{r}
+# Make a Heatmap of DEGs
+
+# extract the log cpm of the top 250 genes and store that in a matrix
+# get the name of the top 250 most significant genes
+top_genes = rownames(topTable(fit, coef=3, number=250))
+# convert log cpm to a matrix structure
+mat = as.matrix(assay(se_cvid,"log_counts_cpm"))[top_genes,] 
+
+# normalize data row-wise
+mat = t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df=data.frame(disease=colData(se_cvid)$disease) 
+
+# create HeatMap with some annotations
+ha = HeatmapAnnotation(df = df, col=ha_colors)
+Heatmap(mat,show_row_names=F,show_column_names=F, top_annotation=ha)
+```
+
+### Pathway analysis {.tabset}
+
+#### EnrichR analysis {.tabset}
+
+##### DESeq2 Genes {.tabset}
+
+```{r}
+# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
+
+enriched <- enrichr(deseq250, dbs)
+```
+
+###### DESeq2 WikiPathways
+
+```{r}
+datatable(enriched$WikiPathways_2016)
+```
+
+###### DESeq2 KEGG
+
+```{r}
+datatable(enriched$KEGG_2016)
+```
+
+###### DESeq2 Panther
+
+```{r}
+datatable(enriched$Panther_2016)
+```
+
+###### DESeq2 Reactome
+
+```{r}
+datatable(enriched$Reactome_2016)
+```
+
+##### Limma Genes (CVID) {.tabset}
+
+```{r}
+enriched <- enrichr(limma250_NCVID, dbs)
+```
+
+###### Limma WikiPathways
+
+```{r}
+datatable(enriched$WikiPathways_2016)
+```
+
+###### Limma KEGG
+
+```{r}
+datatable(enriched$KEGG_2016)
+```
+
+###### Limma Panther
+
+```{r}
+datatable(enriched$Panther_2016)
+```
+
+###### Limma Reactome
+
+```{r}
+datatable(enriched$Reactome_2016)
+```
+
+
