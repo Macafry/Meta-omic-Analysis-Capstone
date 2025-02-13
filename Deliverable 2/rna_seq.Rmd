@@ -43,10 +43,31 @@ dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
 # read RNA expression counts and patient data
 load(file="readMatrix_PBMC_BulkRNAseq_CVID.Rdata")
 
-# "unpack" the results
-counts <- mt.counts
-meta_data <- sample.info
+mt.counts.df <- data.frame(mt.counts)
+groups <- sample.info$disease 
 
+groups <- ifelse(groups %in% c("UCVID", "CVID"), 
+                "Deficient", 
+                as.character(groups)) 
+
+# store index of NCVID subjects
+remove_NCVID_index <- which(groups == "NCVID")
+
+# update group label vector
+groups <- groups[groups != "NCVID"] 
+groups <- factor(groups)
+
+# check modified vector
+print(groups) 
+
+#updating dataframes
+mt.counts.df <- mt.counts.df[,-remove_NCVID_index]
+sample.info <- sample.info[-remove_NCVID_index,]
+sample.info$disease <- groups
+
+#  re-store results
+counts <- mt.counts.df
+meta_data <- sample.info
 
 # isolate group indicator variable
 group <- meta_data$disease
@@ -55,7 +76,7 @@ group <- meta_data$disease
 se_cvid <- SummarizedExperiment(assays=list(counts=counts),
                      colData = meta_data)
 
-# create counts per million, log counts and log counts per million features 
+# create counts per million, log counts and log counts per million features
 # and save them into new assays.
 se_cvid <- mkAssay(se_cvid, log = TRUE, counts_to_CPM = TRUE)
 
