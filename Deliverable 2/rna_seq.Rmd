@@ -43,7 +43,12 @@ dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
 # read RNA expression counts and patient data
 load(file="readMatrix_PBMC_BulkRNAseq_CVID.Rdata")
 
-mt.counts.df <- data.frame(mt.counts)
+if (!file.exists("translated_genes.txt")) {
+    source("gene_translation.R")
+}
+
+
+mt.counts.df <- read.csv("translated_genes.txt", row.names = 1)
 groups <- sample.info$disease 
 
 groups <- ifelse(groups %in% c("UCVID", "CVID"), 
