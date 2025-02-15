@@ -37,8 +37,8 @@ library(biomaRt)
 dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
 ```
 
-
 ### Read in dataset
+
 ```{r}
 
 # read RNA expression counts and patient data
@@ -123,6 +123,8 @@ assays(se_cvid_LPS)
 
 #### PCA
 
+##### Entire sample - Healthy Control & LPS Treatment
+
 ```{r}
 # fit PCA model to log cpm data
 # note: transpose data to make it tidy
@@ -135,15 +137,17 @@ pca_plot$disease <- as.factor(se_cvid$disease) # color/group
 
 # plot PC1 and PC2 by IDC
 g <- pca_plot %>% ggplot(aes(x=PC1, y=PC2, color=disease)) +
-  geom_point(size=1.5) + xlab("PCA1") + ylab("PCA2") +
+  geom_point(size=1.5) + xlab("PC 1") + ylab("PC 2") +
   geom_text(label=colnames(se_cvid), nudge_y = 5,) +
   theme(plot.title = element_text(hjust = 0.5)) +
-  ggtitle("PCA Plot")
+  ggtitle("PCA Plot - Entire Sample")
 
 plot(g)
 ```
 
 #### UMAP
+
+##### Entire sample - Healthy Control & LPS Treatment
 
 ```{r}
 # fit UMAP model to log cpm data
@@ -161,12 +165,12 @@ g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=disease)) +
   geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
   geom_text(label=colnames(se_cvid), nudge_y = 0.1,) +
   theme(plot.title = element_text(hjust = 0.5)) +
-  ggtitle("UMAP Plot")
+  ggtitle("UMAP Plot - Entire Sample")
 
 plot(g)
 ```
 
-#### PCA (Treatment)
+#### PCA (Coloring Treatment Groups)
 
 ```{r}
 # fit PCA model to log cpm data
@@ -180,15 +184,16 @@ pca_plot$treatment <- as.factor(se_cvid$treatment) # color/group
 
 # plot PC1 and PC2 by IDC
 g <- pca_plot %>% ggplot(aes(x=PC1, y=PC2, color=treatment)) +
-  geom_point(size=1.5) + xlab("PCA1") + ylab("PCA2") +
+  geom_point(size=1.5) + xlab("PC 1") + ylab("PC 2") +
   geom_text(label=colnames(se_cvid), nudge_y = 5,) +
   theme(plot.title = element_text(hjust = 0.5)) +
-  ggtitle("PCA Plot")
+  ggtitle("PCA Plot - Entire Sample with Treatment Groups")
 
 plot(g)
 ```
 
-#### UMAP (Treatment)
+#### UMAP (Coloring Treatment Groups)
+
 ```{r}
 # fit UMAP model to log cpm data
 # note: transpose data to make it tidy
@@ -205,7 +210,29 @@ g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=treatment)) +
   geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
   geom_text(label=colnames(se_cvid), nudge_y = 0.1,) +
   theme(plot.title = element_text(hjust = 0.5)) +
-  ggtitle("UMAP Plot")
+  ggtitle("UMAP Plot - Entire Sample with Treatment Groups")
+
+plot(g)
+```
+
+#### PCA (LPS Treatment)
+
+```{r}
+# fit PCA model to log cpm data for LPS treatment group
+# note: transpose data to make it tidy
+set.seed(1)
+pca_out <- prcomp(t(assay(se_cvid_LPS,"log_counts_cpm")))
+
+# define dataframe with PCA components and immune deficiency disease (IDC)
+pca_plot <- as.data.frame(pca_out$x) # X, Y, ...
+pca_plot$disease <- as.factor(se_cvid_LPS$disease) # color/group
+
+# plot PC1 and PC2 by IDC
+g <- pca_plot %>% ggplot(aes(x=PC1, y=PC2, color=disease)) +
+  geom_point(size=1.5) + xlab("PC 1") + ylab("PC 2") +
+  geom_text(label=colnames(se_cvid), nudge_y = 5,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("PCA Plot - LPS group")
 
 plot(g)
 ```
@@ -213,8 +240,8 @@ plot(g)
 
 ### Differential Expression {.tabset}
 
+#### DESeq2 Analysis
 
-#### DESeq2 Analysis 
 ```{r message=FALSE}
 # format data into a DESeq2-friendly Data Structure
 dds <- DESeqDataSetFromMatrix(countData=counts, colData=meta_data, design=~disease)
@@ -225,7 +252,7 @@ dds <- DESeqDataSetFromMatrix(countData=counts, colData=meta_data, design=~disea
 dds<-dds[rowSums(counts(dds))>1,] #Gene Filtering
 
 # fit negative binomial regression
-dds<-DESeq(dds) #Performs estimation of size factors,dispersion, and negative binomial GLM f#itting
+dds<-DESeq(dds) #Performs estimation of size factors, dispersion, and negative binomial GLM f#itting
 
 # extracting results, ordering them by adjusted p-value
 res <- results(dds)[order(results(dds)[,6]),]
@@ -236,9 +263,7 @@ datatable(data.frame(res[1:1000,]))
 
 # store the name of the top 250 most significant genes
 deseq250 <- rownames(res)[1:250]
-``` 
-
-
+```
 
 #### Heatmap of DEGs (DESeq2)
 
@@ -265,8 +290,8 @@ Heatmap(mat,show_row_names=F,show_column_names = F, top_annotation=ha)
 
 ```
 
-  
 #### Limma Analysis
+
 ```{r}
 # collapse data into healthy or not
 
@@ -302,10 +327,7 @@ datatable(topTable(fit, coef=2, number=1000))
 limma250 <- rownames(topTable(fit, coef=2, number=250))
 ```
 
-
-
-#### Heatmap of DEGs 
-
+#### Heatmap of DEGs
 
 ```{r}
 # Make a Heatmap of DEGs
@@ -326,7 +348,6 @@ df=data.frame(disease=colData(se_cvid)$disease)
 ha = HeatmapAnnotation(df = df, col=ha_colors)
 Heatmap(mat,show_row_names=F,show_column_names=F, top_annotation=ha)
 ```
-
 
 ### Pathway analysis {.tabset}
 
@@ -393,5 +414,3 @@ datatable(enriched$Panther_2016)
 ```{r}
 datatable(enriched$Reactome_2016)
 ```
-
-
