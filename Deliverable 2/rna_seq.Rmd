@@ -31,6 +31,7 @@ library(tidyverse)
 library(DT)
 library(GSVA)
 library(enrichR)
+library(biomaRt)
 
 # define pathway libraries
 dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
@@ -81,12 +82,41 @@ group <- meta_data$disease
 se_cvid <- SummarizedExperiment(assays=list(counts=counts),
                      colData = meta_data)
 
-# create counts per million, log counts and log counts per million features
-# and save them into new assays.
-se_cvid <- mkAssay(se_cvid, log = TRUE, counts_to_CPM = TRUE)
 
-# display all assays
+# isolating treatment group experiments
+treatments <- meta_data$treatment
+ctrl_index <- which(treatments == "ctrl")
+LPS_index <- which(treatments == "LPS")
+
+counts_ctrl <- counts[,-LPS_index]
+counts_LPS <- counts[,-ctrl_index]
+
+meta_data_ctrl <- meta_data[-LPS_index,]
+meta_data_LPS <- meta_data[-ctrl_index,]
+
+se_cvid_ctrl <- SummarizedExperiment(assays=list(counts=counts_ctrl),
+                     colData = meta_data_ctrl)
+se_cvid_LPS <- SummarizedExperiment(assays=list(counts=counts_LPS),
+                     colData = meta_data_LPS)
+
+# create counts per million, log counts and log counts per million features
+# and save them into new assays
+se_cvid <- mkAssay(se_cvid, log = TRUE, counts_to_CPM = TRUE)
+# same for control only
+se_cvid_ctrl <- mkAssay(se_cvid_ctrl, log = TRUE, counts_to_CPM = TRUE)
+# same for LPS treatment group only
+se_cvid_LPS <- mkAssay(se_cvid_LPS, log = TRUE, counts_to_CPM = TRUE)
+
+
+# display all assays, control and LPS treatment
 assays(se_cvid)
+
+# display all assays, control only
+assays(se_cvid_ctrl)
+
+# display all assays, LPS treatment only
+assays(se_cvid_LPS)
+
 ```
 
 ### Visualization and Dimension reduction {.tabset}
