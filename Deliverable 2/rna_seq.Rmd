@@ -228,8 +228,7 @@ mat = t(scale(t(mat)))
 df=data.frame(disease=colData(se_cvid)$disease) 
 
 # create HeatMap with some annotations
-ha_colors = list(disease=c("healthy"="Blue","CVID"="Red", 
-                             "UCVID"="Green", "NCVID"="Brown"))
+ha_colors = list(disease=c("healthy"="Blue","Deficient"="Red"))
 
 ha = HeatmapAnnotation(df = df, col = ha_colors)
 Heatmap(mat,show_row_names=F,show_column_names = F, top_annotation=ha)
@@ -237,8 +236,7 @@ Heatmap(mat,show_row_names=F,show_column_names = F, top_annotation=ha)
 ```
 
   
-#### Limma Analysis {.tabset}
-
+#### Limma Analysis
 ```{r}
 # collapse data into healthy or not
 
@@ -264,13 +262,6 @@ v<-voom(dge, design) #voom transform to calculate weights to eliminate mean-vari
 fit<-lmFit(v,design)
 fit<-eBayes(fit)
 
-
-```
-
-
-
-##### UCVID
-```{r}
 # organize data by top ranked genes when predicting IDC (coef = col#2 = UCVID)
 # topTable(fit, coef=2)
 
@@ -278,38 +269,13 @@ fit<-eBayes(fit)
 datatable(topTable(fit, coef=2, number=1000))
 
 # store the name of the top 250 most significant genes
-limma250_UCVID <- rownames(topTable(fit, coef=2, number=250))
+limma250 <- rownames(topTable(fit, coef=2, number=250))
 ```
 
 
-##### CVID
-```{r}
-# organize data by top ranked genes when predicting IDC (coef = col#3 = CVID)
-# topTable(fit, coef=3)
 
-# display top 1000 most significant genes
-datatable(topTable(fit, coef=3, number=1000))
+#### Heatmap of DEGs 
 
-# store the name of the top 250 most significant genes
-limma250_CVID <- rownames(topTable(fit, coef=3, number=250))
-```
-
-
-##### NCVID
-```{r}
-# organize data by top ranked genes when predicting IDC (coef = col#3 = NCVID)
-# topTable(fit, coef=4)
-
-# display top 1000 most significant genes
-datatable(topTable(fit, coef=4, number=1000))
-
-# store the name of the top 250 most significant genes
-limma250_NCVID <- rownames(topTable(fit, coef=4, number=250))
-```
-
-#### Heatmap of DEGs {.tabset}
-
-##### UCVID
 
 ```{r}
 # Make a Heatmap of DEGs
@@ -331,49 +297,6 @@ ha = HeatmapAnnotation(df = df, col=ha_colors)
 Heatmap(mat,show_row_names=F,show_column_names=F, top_annotation=ha)
 ```
 
-##### CVID
-
-```{r}
-# Make a Heatmap of DEGs
-
-# extract the log cpm of the top 250 genes and store that in a matrix
-# get the name of the top 250 most significant genes
-top_genes = rownames(topTable(fit, coef=3, number=250))
-# convert log cpm to a matrix structure
-mat = as.matrix(assay(se_cvid,"log_counts_cpm"))[top_genes,] 
-
-# normalize data row-wise
-mat = t(scale(t(mat)))
-
-# store IDC into a single-column dataframe
-df=data.frame(disease=colData(se_cvid)$disease) 
-
-# create HeatMap with some annotations
-ha = HeatmapAnnotation(df = df, col=ha_colors)
-Heatmap(mat,show_row_names=F,show_column_names=F, top_annotation=ha)
-```
-
-##### NCVID
-
-```{r}
-# Make a Heatmap of DEGs
-
-# extract the log cpm of the top 250 genes and store that in a matrix
-# get the name of the top 250 most significant genes
-top_genes = rownames(topTable(fit, coef=3, number=250))
-# convert log cpm to a matrix structure
-mat = as.matrix(assay(se_cvid,"log_counts_cpm"))[top_genes,] 
-
-# normalize data row-wise
-mat = t(scale(t(mat)))
-
-# store IDC into a single-column dataframe
-df=data.frame(disease=colData(se_cvid)$disease) 
-
-# create HeatMap with some annotations
-ha = HeatmapAnnotation(df = df, col=ha_colors)
-Heatmap(mat,show_row_names=F,show_column_names=F, top_annotation=ha)
-```
 
 ### Pathway analysis {.tabset}
 
@@ -414,7 +337,7 @@ datatable(enriched$Reactome_2016)
 ##### Limma Genes (CVID) {.tabset}
 
 ```{r}
-enriched <- enrichr(limma250_NCVID, dbs)
+enriched <- enrichr(limma250, dbs)
 ```
 
 ###### Limma WikiPathways
