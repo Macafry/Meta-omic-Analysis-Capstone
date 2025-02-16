@@ -2,4 +2,5 @@
 *.rds
 *.Rdata
 .Rhistory
+.DS_Store
 analysis_de_count_PJ02_analysis.R
