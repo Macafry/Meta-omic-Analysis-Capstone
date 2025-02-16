@@ -169,7 +169,6 @@ g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=disease)) +
 
 plot(g)
 ```
-
 #### PCA (Coloring Treatment Groups)
 
 ```{r}
@@ -215,7 +214,22 @@ g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=treatment)) +
 plot(g)
 ```
 
-#### PCA (LPS Treatment)
+As we can observe, the treatment variable overwhelms the dimension reduction, indicating we should run separate analysis for each treatment group.
+
+# Group Analyses {.tabset}
+
+## LPS Group
+```{r LPS_vars, include=FALSE}
+counts <- assay(se_cvid_LPS, "counts")
+meta_data <- colData(se_cvid_LPS)
+disease <- meta_data$disease
+group <- meta_data$disease
+```
+
+
+### Visualization and Dimension reduction {.tabset}
+
+#### PCA 
 
 ```{r}
 # fit PCA model to log cpm data for LPS treatment group
@@ -230,13 +244,35 @@ pca_plot$disease <- as.factor(se_cvid_LPS$disease) # color/group
 # plot PC1 and PC2 by IDC
 g <- pca_plot %>% ggplot(aes(x=PC1, y=PC2, color=disease)) +
   geom_point(size=1.5) + xlab("PC 1") + ylab("PC 2") +
-  geom_text(label=colnames(se_cvid), nudge_y = 5,) +
+  geom_text(label=colnames(se_cvid_LPS), nudge_y = 5,) +
   theme(plot.title = element_text(hjust = 0.5)) +
   ggtitle("PCA Plot - LPS group")
 
 plot(g)
 ```
 
+#### UMAP 
+
+```{r}
+# fit UMAP model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+umap.defaults$n_neighbors=5
+umap_out <- umap(t(assay(se_cvid_LPS,"log_counts_cpm")), config=umap.defaults)
+
+# define dataframe with UMAP dimensions and IDC
+umap_plot <- as.data.frame(umap_out$layout) # X, Y, ...
+umap_plot$disease <- as.factor(se_cvid_LPS$disease) # color / group
+
+# plot UMAP1 and UMAP2 by IDC
+g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=disease)) +
+  geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
+  geom_text(label=colnames(se_cvid_LPS), nudge_y = 0.1,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("UMAP Plot - LPS group")
+
+plot(g)
+```
 
 ### Differential Expression {.tabset}
 
@@ -274,13 +310,13 @@ deseq250 <- rownames(res)[1:250]
 # # get the name of the genes ordered by adjusted p-val
 top_genes = rownames(results(dds)[order(results(dds)$padj),])[1:250]
 # # convert log cpm to a matrix structure sorted by the top genes
-mat = as.matrix(assay(se_cvid,"log_counts_cpm"))[top_genes,] 
+mat = as.matrix(assay(se_cvid_LPS,"log_counts_cpm"))[top_genes,] 
 
 # normalize data row-wise
 mat = t(scale(t(mat)))
 
 # store IDC into a single-column dataframe
-df=data.frame(disease=colData(se_cvid)$disease) 
+df=data.frame(disease=colData(se_cvid_LPS)$disease) 
 
 # create HeatMap with some annotations
 ha_colors = list(disease=c("healthy"="Blue","Deficient"="Red"))
@@ -336,13 +372,13 @@ limma250 <- rownames(topTable(fit, coef=2, number=250))
 # get the name of the top 250 most significant genes
 top_genes = rownames(topTable(fit, coef=2, number=250))
 # convert log cpm to a matrix structure
-mat = as.matrix(assay(se_cvid,"log_counts_cpm"))[top_genes,] 
+mat = as.matrix(assay(se_cvid_LPS,"log_counts_cpm"))[top_genes,] 
 
 # normalize data row-wise
 mat = t(scale(t(mat)))
 
 # store IDC into a single-column dataframe
-df=data.frame(disease=colData(se_cvid)$disease) 
+df=data.frame(disease=colData(se_cvid_LPS)$disease) 
 
 # create HeatMap with some annotations
 ha = HeatmapAnnotation(df = df, col=ha_colors)
@@ -414,3 +450,276 @@ datatable(enriched$Panther_2016)
 ```{r}
 datatable(enriched$Reactome_2016)
 ```
+
+```{r LPS_out, include=FALSE}
+LPS_deseq <- deseq250
+LPS_limma <- limma250
+```
+
+## Treatment Group
+
+```{r ctrl_vars, include=FALSE}
+counts <- assay(se_cvid_ctrl, "counts")
+meta_data <- colData(se_cvid_ctrl)
+disease <- meta_data$disease
+group <- meta_data$disease
+```
+
+### Visualization and Dimension reduction {.tabset}
+
+#### PCA 
+
+```{r}
+# fit PCA model to log cpm data for LPS treatment group
+# note: transpose data to make it tidy
+set.seed(1)
+pca_out <- prcomp(t(assay(se_cvid_ctrl,"log_counts_cpm")))
+
+# define dataframe with PCA components and immune deficiency disease (IDC)
+pca_plot <- as.data.frame(pca_out$x) # X, Y, ...
+pca_plot$disease <- as.factor(se_cvid_ctrl$disease) # color/group
+
+# plot PC1 and PC2 by IDC
+g <- pca_plot %>% ggplot(aes(x=PC1, y=PC2, color=disease)) +
+  geom_point(size=1.5) + xlab("PC 1") + ylab("PC 2") +
+  geom_text(label=colnames(se_cvid_ctrl), nudge_y = 5,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("PCA Plot - Control group")
+
+plot(g)
+```
+
+#### UMAP 
+
+```{r}
+# fit UMAP model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+umap.defaults$n_neighbors=5
+umap_out <- umap(t(assay(se_cvid_ctrl,"log_counts_cpm")), config=umap.defaults)
+
+# define dataframe with UMAP dimensions and IDC
+umap_plot <- as.data.frame(umap_out$layout) # X, Y, ...
+umap_plot$disease <- as.factor(se_cvid_ctrl$disease) # color / group
+
+# plot UMAP1 and UMAP2 by IDC
+g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=disease)) +
+  geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
+  geom_text(label=colnames(se_cvid_ctrl), nudge_y = 0.1,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("UMAP Plot - Control group")
+
+plot(g)
+```
+
+### Differential Expression {.tabset}
+
+#### DESeq2 Analysis
+
+```{r message=FALSE}
+# format data into a DESeq2-friendly Data Structure
+dds <- DESeqDataSetFromMatrix(countData=counts, colData=meta_data, design=~disease)
+#colData is a data frame of demographic/phenotypic data
+
+# filter for genes with significant expression  
+# expression should be > 0, but > 100 should be better
+dds<-dds[rowSums(counts(dds))>1,] #Gene Filtering
+
+# fit negative binomial regression
+dds<-DESeq(dds) #Performs estimation of size factors, dispersion, and negative binomial GLM f#itting
+
+# extracting results, ordering them by adjusted p-value
+res <- results(dds)[order(results(dds)[,6]),]
+#res[1:10,]
+
+# dislpay results for the top 1000 most significant genes
+datatable(data.frame(res[1:1000,]))
+
+# store the name of the top 250 most significant genes
+deseq250 <- rownames(res)[1:250]
+```
+
+#### Heatmap of DEGs (DESeq2)
+
+```{r}
+# Make a Heatmap of DEGs
+
+# All together: extract the log cpm of the top 250 genes and store that in a matrix
+# # get the name of the genes ordered by adjusted p-val
+top_genes = rownames(results(dds)[order(results(dds)$padj),])[1:250]
+# # convert log cpm to a matrix structure sorted by the top genes
+mat = as.matrix(assay(se_cvid_ctrl,"log_counts_cpm"))[top_genes,] 
+
+# normalize data row-wise
+mat = t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df=data.frame(disease=colData(se_cvid_ctrl)$disease) 
+
+# create HeatMap with some annotations
+ha_colors = list(disease=c("healthy"="Blue","Deficient"="Red"))
+
+ha = HeatmapAnnotation(df = df, col = ha_colors)
+Heatmap(mat,show_row_names=F,show_column_names = F, top_annotation=ha)
+
+```
+
+#### Limma Analysis
+
+```{r}
+# collapse data into healthy or not
+
+# Store data in Limma-friendly Data Structure
+dge <- DGEList(counts=counts, group=group) #From edgeR, Computes library size
+
+# filter for genes with significant expression
+counts<-counts[which(rowSums(cpm(counts))>1),] #Gene Filtering #(mask)
+dge <- DGEList(counts=counts, group=group) #Re-compute library size #(filter)
+
+# Trimmed-Mean Normalization of data
+dge <- calcNormFactors(dge) #TMM normalization
+
+# Create design matrix (intercept + indicator variable)
+
+design<-model.matrix(~group)
+
+# distribution normalizing transformation
+v<-voom(dge, design) #voom transform to calculate weights to eliminate mean-variance #relationship
+#use usual limma pipelines
+
+# fit empirical bayes regression model
+fit<-lmFit(v,design)
+fit<-eBayes(fit)
+
+# organize data by top ranked genes when predicting IDC (coef = col#2 = UCVID)
+# topTable(fit, coef=2)
+
+# display top 1000 most significant genes
+datatable(topTable(fit, coef=2, number=1000))
+
+# store the name of the top 250 most significant genes
+limma250 <- rownames(topTable(fit, coef=2, number=250))
+```
+
+#### Heatmap of DEGs
+
+```{r}
+# Make a Heatmap of DEGs
+
+# extract the log cpm of the top 250 genes and store that in a matrix
+# get the name of the top 250 most significant genes
+top_genes = rownames(topTable(fit, coef=2, number=250))
+# convert log cpm to a matrix structure
+mat = as.matrix(assay(se_cvid_ctrl,"log_counts_cpm"))[top_genes,] 
+
+# normalize data row-wise
+mat = t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df=data.frame(disease=colData(se_cvid_ctrl)$disease) 
+
+# create HeatMap with some annotations
+ha = HeatmapAnnotation(df = df, col=ha_colors)
+Heatmap(mat,show_row_names=F,show_column_names=F, top_annotation=ha)
+```
+
+### Pathway analysis {.tabset}
+
+#### EnrichR analysis {.tabset}
+
+##### DESeq2 Genes {.tabset}
+
+```{r}
+# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
+
+enriched <- enrichr(deseq250, dbs)
+```
+
+###### DESeq2 WikiPathways
+
+```{r}
+datatable(enriched$WikiPathways_2016)
+```
+
+###### DESeq2 KEGG
+
+```{r}
+datatable(enriched$KEGG_2016)
+```
+
+###### DESeq2 Panther
+
+```{r}
+datatable(enriched$Panther_2016)
+```
+
+###### DESeq2 Reactome
+
+```{r}
+datatable(enriched$Reactome_2016)
+```
+
+##### Limma Genes (CVID) {.tabset}
+
+```{r}
+enriched <- enrichr(limma250, dbs)
+```
+
+###### Limma WikiPathways
+
+```{r}
+datatable(enriched$WikiPathways_2016)
+```
+
+###### Limma KEGG
+
+```{r}
+datatable(enriched$KEGG_2016)
+```
+
+###### Limma Panther
+
+```{r}
+datatable(enriched$Panther_2016)
+```
+
+###### Limma Reactome
+
+```{r}
+datatable(enriched$Reactome_2016)
+```
+
+```{r ctrl_out, include=FALSE}
+ctrl_deseq <- deseq250
+ctrl_limma <- limma250
+```
+
+## Comparison {.tabset}
+
+### Common Significant genes
+```{r}
+(common_deseq <- intersect(LPS_deseq, ctrl_deseq))
+(common_lima <- intersect(LPS_limma, ctrl_limma))
+```
+
+### Significant genes for LPS group only
+```{r}
+setdiff(LPS_deseq, common_deseq)
+setdiff(LPS_limma, common_lima)
+```
+
+
+### Significant genes for Control group only
+```{r}
+setdiff(ctrl_deseq, common_deseq)
+setdiff(ctrl_limma, common_lima)
+```
+
+### Similarity Coefficients
+```{r}
+length(common_deseq) / length(union(LPS_deseq, ctrl_deseq))
+length(common_lima) / length(union(LPS_limma, ctrl_limma))
+```
+
+
+
