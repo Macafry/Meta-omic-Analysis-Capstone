@@ -22,7 +22,7 @@ library(readr)
 
 ```
 
-##### Load top 250 DEGs per sample/group
+### Load top 250 DEGs per sample/group
 
 ```{r}
 # WD set to /Deliverable 3/data directory
@@ -42,30 +42,30 @@ LPS_limma <- results_2_df$LPS_limma
 
 ## Comparison {.tabset}
 
-### LPS v. Healthy Control {.tabset}
+## LPS v. Healthy Control {.tabset}
 
-#### Common Significant genes
+### Common Significant genes
 
 ```{r}
 (common_deseq <- intersect(LPS_deseq, ctrl_deseq))
 (common_limma <- intersect(LPS_limma, ctrl_limma))
 ```
 
-#### Significant genes for LPS group only
+### Significant genes for LPS group only
 
 ```{r}
 setdiff(LPS_deseq, common_deseq)
 setdiff(LPS_limma, common_limma)
 ```
 
-#### Significant genes for Control group only
+### Significant genes for Control group only
 
 ```{r}
 setdiff(ctrl_deseq, common_deseq)
 setdiff(ctrl_limma, common_limma)
 ```
 
-#### Similarity Coefficients for Limma, DESeq analyses
+### Similarity Coefficients for Limma, DESeq analyses
 
 ```{r}
 print("DESeq similarity coefficient")
@@ -75,9 +75,9 @@ print("LIMMA similarity coefficient")
 length(common_limma) / length(union(LPS_limma, ctrl_limma))
 ```
 
-### Nasal and Control PBMC {.tabset}
+## Nasal and Healthy Control PBMC {.tabset}
 
-#### Common Significant genes:
+### Common Significant genes:
 
 ```{r}
 
@@ -86,21 +86,21 @@ length(common_limma) / length(union(LPS_limma, ctrl_limma))
 
 ```
 
-#### Significant genes for nasal mucusal samples only
+### Significant genes for nasal mucusal samples only
 
 ```{r}
 setdiff(nasal_deseq, common_deseq)
 setdiff(nasal_limma, common_limma)
 ```
 
-#### Significant genes for Control group only
+### Significant genes for Control group only
 
 ```{r}
 setdiff(ctrl_deseq, common_deseq)
 setdiff(ctrl_limma, common_limma)
 ```
 
-#### Similarity Coefficients for Nasal v. PBMC Limma, DESeq analyses
+### Similarity Coefficients for Nasal v. PBMC Limma, DESeq analyses
 
 ```{r}
 
@@ -109,5 +109,42 @@ length(common_deseq) / length(union(nasal_deseq, ctrl_deseq))
 
 print("LIMMA similarity coefficient for Nasal v. PBMC samples")
 length(common_limma) / length(union(nasal_limma, ctrl_limma))
+
+```
+
+## Nasal and LPS Treatment PBMC {.tabset}
+
+### Common Significant genes:
+
+```{r}
+
+(common_deseq <- intersect(nasal_deseq, LPS_deseq)) 
+(common_limma <- intersect(nasal_limma, LPS_limma))
+
+```
+
+### Significant genes for nasal mucusal samples only
+
+```{r}
+setdiff(nasal_deseq, common_deseq)
+setdiff(nasal_limma, common_limma)
+```
+
+### Significant genes for LPS Treatment group only
+
+```{r}
+setdiff(LPS_deseq, common_deseq)
+setdiff(LPS_limma, common_limma)
+```
+
+### Similarity Coefficients for Nasal v. PBMC Limma, DESeq analyses
+
+```{r}
+
+print("DESeq similarity coefficient for Nasal v. PBMC samples")
+length(common_deseq) / length(union(nasal_deseq, LPS_deseq))
+
+print("LIMMA similarity coefficient for Nasal v. PBMC samples")
+length(common_limma) / length(union(nasal_limma, LPS_limma))
 
 ```

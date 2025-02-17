@@ -1594,8 +1594,8 @@ Stults</h4>
 </div>
 
 
-<div id="load-top-250-degs-per-samplegroup" class="section level5">
-<h5>Load top 250 DEGs per sample/group</h5>
+<div id="load-top-250-degs-per-samplegroup" class="section level3">
+<h3>Load top 250 DEGs per sample/group</h3>
 <pre class="r"><code># WD set to /Deliverable 3/data directory
 # setwd(&quot;~/Documents/.../Meta-omic-Analysis-Capstone/Deliverable 3&quot;)
 
@@ -1625,10 +1625,11 @@ LPS_limma &lt;- results_2_df$LPS_limma</code></pre>
 </div>
 <div id="comparison" class="section level2 tabset">
 <h2 class="tabset">Comparison</h2>
-<div id="lps-v.-healthy-control" class="section level3 tabset">
-<h3 class="tabset">LPS v. Healthy Control</h3>
-<div id="common-significant-genes" class="section level4">
-<h4>Common Significant genes</h4>
+</div>
+<div id="lps-v.-healthy-control" class="section level2 tabset">
+<h2 class="tabset">LPS v. Healthy Control</h2>
+<div id="common-significant-genes" class="section level3">
+<h3>Common Significant genes</h3>
 <pre class="r"><code>(common_deseq &lt;- intersect(LPS_deseq, ctrl_deseq))</code></pre>
 <pre><code>##  [1] &quot;IGHG4&quot;     &quot;MEOX1&quot;     &quot;IGHA1&quot;     &quot;IGHA2&quot;     &quot;KLHL9&quot;     &quot;IGHV3-74&quot; 
 ##  [7] &quot;TEX9&quot;      &quot;COCH&quot;      &quot;GPR55&quot;     &quot;JAZF1&quot;     &quot;CERKL&quot;     &quot;IGKV2D-29&quot;
@@ -1657,8 +1658,8 @@ LPS_limma &lt;- results_2_df$LPS_limma</code></pre>
 ## [79] &quot;ALPL&quot;      &quot;MOXD1&quot;     &quot;IGKV1-9&quot;   &quot;BHLHA15&quot;   &quot;IGHV3-30&quot;  &quot;SHISA8&quot;   
 ## [85] &quot;IGHV3-11&quot;  &quot;ARL14&quot;     &quot;IGKV2-24&quot;  &quot;FANK1&quot;     &quot;IGKV3-15&quot;</code></pre>
 </div>
-<div id="significant-genes-for-lps-group-only" class="section level4">
-<h4>Significant genes for LPS group only</h4>
+<div id="significant-genes-for-lps-group-only" class="section level3">
+<h3>Significant genes for LPS group only</h3>
 <pre class="r"><code>setdiff(LPS_deseq, common_deseq)</code></pre>
 <pre><code>##   [1] &quot;BTNL9&quot;         &quot;PPP1R21&quot;       &quot;CYB561D1&quot;      &quot;MIR9-3HG&quot;     
 ##   [5] &quot;FBXO32&quot;        &quot;FAM149A&quot;       &quot;METTL2B&quot;       &quot;PARM1&quot;        
@@ -1752,8 +1753,8 @@ LPS_limma &lt;- results_2_df$LPS_limma</code></pre>
 ## [157] &quot;CLDN14&quot;         &quot;KCNK10&quot;         &quot;TPST2&quot;          &quot;MTARC1&quot;        
 ## [161] &quot;RNF182&quot;</code></pre>
 </div>
-<div id="significant-genes-for-control-group-only" class="section level4">
-<h4>Significant genes for Control group only</h4>
+<div id="significant-genes-for-control-group-only" class="section level3">
+<h3>Significant genes for Control group only</h3>
 <pre class="r"><code>setdiff(ctrl_deseq, common_deseq)</code></pre>
 <pre><code>##   [1] &quot;SH3PXD2B&quot;    &quot;SCG5&quot;        &quot;KCNN3&quot;       &quot;CCL22&quot;       &quot;TMEM132A&quot;   
 ##   [6] &quot;LRRC38&quot;      &quot;IGLC7&quot;       &quot;MUCL1&quot;       &quot;SLF2&quot;        &quot;SNHG31&quot;     
@@ -1829,8 +1830,8 @@ LPS_limma &lt;- results_2_df$LPS_limma</code></pre>
 ## [156] &quot;NEPNP&quot;       &quot;SLC44A3&quot;     &quot;WNT10A&quot;      &quot;COL1A1&quot;      &quot;IGLV5-45&quot;   
 ## [161] &quot;CSF3&quot;</code></pre>
 </div>
-<div id="similarity-coefficients-for-limma-deseq-analyses" class="section level4">
-<h4>Similarity Coefficients for Limma, DESeq analyses</h4>
+<div id="similarity-coefficients-for-limma-deseq-analyses" class="section level3">
+<h3>Similarity Coefficients for Limma, DESeq analyses</h3>
 <pre class="r"><code>print(&quot;DESeq similarity coefficient&quot;)</code></pre>
 <pre><code>## [1] &quot;DESeq similarity coefficient&quot;</code></pre>
 <pre class="r"><code>length(common_deseq) / length(union(LPS_deseq, ctrl_deseq))</code></pre>
@@ -1841,17 +1842,17 @@ LPS_limma &lt;- results_2_df$LPS_limma</code></pre>
 <pre><code>## [1] 0.216545</code></pre>
 </div>
 </div>
-<div id="nasal-and-control-pbmc" class="section level3 tabset">
-<h3 class="tabset">Nasal and Control PBMC</h3>
-<div id="common-significant-genes-1" class="section level4">
-<h4>Common Significant genes:</h4>
+<div id="nasal-and-healthy-control-pbmc" class="section level2 tabset">
+<h2 class="tabset">Nasal and Healthy Control PBMC</h2>
+<div id="common-significant-genes-1" class="section level3">
+<h3>Common Significant genes:</h3>
 <pre class="r"><code>(common_deseq &lt;- intersect(nasal_deseq, ctrl_deseq)) </code></pre>
 <pre><code>## [1] &quot;SEMA7A&quot;  &quot;PDGFA&quot;   &quot;TNIP3&quot;   &quot;TNFRSF9&quot;</code></pre>
 <pre class="r"><code>(common_limma &lt;- intersect(nasal_limma, ctrl_limma))</code></pre>
 <pre><code>## [1] &quot;SEMA7A&quot; &quot;MEI1&quot;</code></pre>
 </div>
-<div id="significant-genes-for-nasal-mucusal-samples-only" class="section level4">
-<h4>Significant genes for nasal mucusal samples only</h4>
+<div id="significant-genes-for-nasal-mucusal-samples-only" class="section level3">
+<h3>Significant genes for nasal mucusal samples only</h3>
 <pre class="r"><code>setdiff(nasal_deseq, common_deseq)</code></pre>
 <pre><code>##   [1] &quot;NTRK2&quot;      &quot;EXOC3L4&quot;    &quot;NTS&quot;        &quot;CALHM2&quot;     &quot;TOX2&quot;      
 ##   [6] &quot;LINC02328&quot;  &quot;MAF&quot;        &quot;COL6A3&quot;     &quot;TRGV4&quot;      &quot;SEPTIN1&quot;   
@@ -1955,8 +1956,8 @@ LPS_limma &lt;- results_2_df$LPS_limma</code></pre>
 ## [241] &quot;SLC25A47&quot;   &quot;PIK3R6&quot;     &quot;MT1G&quot;       &quot;MSR1&quot;       &quot;AC083837.1&quot;
 ## [246] &quot;SOWAHD&quot;     &quot;TGFBI&quot;      &quot;ZDHHC15&quot;</code></pre>
 </div>
-<div id="significant-genes-for-control-group-only-1" class="section level4">
-<h4>Significant genes for Control group only</h4>
+<div id="significant-genes-for-control-group-only-1" class="section level3">
+<h3>Significant genes for Control group only</h3>
 <pre class="r"><code>setdiff(ctrl_deseq, common_deseq)</code></pre>
 <pre><code>##   [1] &quot;IGHG4&quot;       &quot;ITGA4&quot;       &quot;MARK1&quot;       &quot;NPR1&quot;        &quot;SH3PXD2B&quot;   
 ##   [6] &quot;SCG5&quot;        &quot;KCNN3&quot;       &quot;TEX9&quot;        &quot;CCL22&quot;       &quot;IGHA1&quot;      
@@ -2060,8 +2061,8 @@ LPS_limma &lt;- results_2_df$LPS_limma</code></pre>
 ## [241] &quot;LINC02909&quot;   &quot;NUP133&quot;      &quot;NEPNP&quot;       &quot;SLC44A3&quot;     &quot;WNT10A&quot;     
 ## [246] &quot;COL1A1&quot;      &quot;IGLV5-45&quot;    &quot;CSF3&quot;</code></pre>
 </div>
-<div id="similarity-coefficients-for-nasal-v.-pbmc-limma-deseq-analyses" class="section level4">
-<h4>Similarity Coefficients for Nasal v. PBMC Limma, DESeq analyses</h4>
+<div id="similarity-coefficients-for-nasal-v.-pbmc-limma-deseq-analyses" class="section level3">
+<h3>Similarity Coefficients for Nasal v. PBMC Limma, DESeq analyses</h3>
 <pre class="r"><code>print(&quot;DESeq similarity coefficient for Nasal v. PBMC samples&quot;)</code></pre>
 <pre><code>## [1] &quot;DESeq similarity coefficient for Nasal v. PBMC samples&quot;</code></pre>
 <pre class="r"><code>length(common_deseq) / length(union(nasal_deseq, ctrl_deseq))</code></pre>
@@ -2071,6 +2072,259 @@ LPS_limma &lt;- results_2_df$LPS_limma</code></pre>
 <pre class="r"><code>length(common_limma) / length(union(nasal_limma, ctrl_limma))</code></pre>
 <pre><code>## [1] 0.004016064</code></pre>
 </div>
+</div>
+<div id="nasal-and-lps-treatment-pbmc" class="section level2 tabset">
+<h2 class="tabset">Nasal and LPS Treatment PBMC</h2>
+<div id="common-significant-genes-2" class="section level3">
+<h3>Common Significant genes:</h3>
+<pre class="r"><code>(common_deseq &lt;- intersect(nasal_deseq, LPS_deseq)) </code></pre>
+<pre><code>## [1] &quot;SLC26A5&quot; &quot;CXCR3&quot;   &quot;ANKRD29&quot; &quot;CD3D&quot;    &quot;GPR174&quot;</code></pre>
+<pre class="r"><code>(common_limma &lt;- intersect(nasal_limma, LPS_limma))</code></pre>
+<pre><code>## [1] &quot;HLA-DQA2&quot; &quot;CD84&quot;     &quot;CHST3&quot;</code></pre>
+</div>
+<div id="significant-genes-for-nasal-mucusal-samples-only-1" class="section level3">
+<h3>Significant genes for nasal mucusal samples only</h3>
+<pre class="r"><code>setdiff(nasal_deseq, common_deseq)</code></pre>
+<pre><code>##   [1] &quot;NTRK2&quot;      &quot;EXOC3L4&quot;    &quot;NTS&quot;        &quot;CALHM2&quot;     &quot;TOX2&quot;      
+##   [6] &quot;LINC02328&quot;  &quot;MAF&quot;        &quot;COL6A3&quot;     &quot;TRGV4&quot;      &quot;SEPTIN1&quot;   
+##  [11] &quot;CST1&quot;       &quot;TMC8&quot;       &quot;IL12RB1&quot;    &quot;LINC01215&quot;  &quot;CD180&quot;     
+##  [16] &quot;TIFAB&quot;      &quot;GATA3&quot;      &quot;AF131215.6&quot; &quot;SLCO1B3&quot;    &quot;TBC1D10C&quot;  
+##  [21] &quot;TRPV2&quot;      &quot;ABI3&quot;       &quot;IL32&quot;       &quot;FGD2&quot;       &quot;MYO1G&quot;     
+##  [26] &quot;PTPRQ&quot;      &quot;PARVG&quot;      &quot;CCDC88B&quot;    &quot;GBP5&quot;       &quot;CD248&quot;     
+##  [31] &quot;GZMM&quot;       &quot;TMEM156&quot;    &quot;CARMIL2&quot;    &quot;CD7&quot;        &quot;DOK2&quot;      
+##  [36] &quot;TLL1&quot;       &quot;SEMA7A&quot;     &quot;NRN1&quot;       &quot;IKZF1&quot;      &quot;SPN&quot;       
+##  [41] &quot;AC008105.3&quot; &quot;SUCNR1&quot;     &quot;PTPN7&quot;      &quot;AACSP1&quot;     &quot;CPXM2&quot;     
+##  [46] &quot;ACAP1&quot;      &quot;BMP7&quot;       &quot;MAP4K1&quot;     &quot;ADCY7&quot;      &quot;FGD5&quot;      
+##  [51] &quot;NECAB1&quot;     &quot;SLCO1B7&quot;    &quot;ASB2&quot;       &quot;CPVL&quot;       &quot;TMEM176B&quot;  
+##  [56] &quot;DAB2&quot;       &quot;SIPA1&quot;      &quot;CIITA&quot;      &quot;PDGFA&quot;      &quot;VASH1&quot;     
+##  [61] &quot;CD40LG&quot;     &quot;UBD&quot;        &quot;DPP10&quot;      &quot;PCED1B-AS1&quot; &quot;GVINP1&quot;    
+##  [66] &quot;RASAL3&quot;     &quot;UBASH3A&quot;    &quot;AL159141.1&quot; &quot;ARHGAP4&quot;    &quot;CPA3&quot;      
+##  [71] &quot;SMTNL1&quot;     &quot;XKR6&quot;       &quot;DOCK10&quot;     &quot;TNIP3&quot;      &quot;SOCS1&quot;     
+##  [76] &quot;COL6A1&quot;     &quot;NCR3&quot;       &quot;ZNF366&quot;     &quot;TENM1&quot;      &quot;FMNL3&quot;     
+##  [81] &quot;FAM78A&quot;     &quot;RENBP&quot;      &quot;IVL&quot;        &quot;DPYS&quot;       &quot;TRBC2&quot;     
+##  [86] &quot;ADRA2B&quot;     &quot;ADAP2&quot;      &quot;SLC8A1&quot;     &quot;AL132642.1&quot; &quot;CORO1A&quot;    
+##  [91] &quot;ZAP70&quot;      &quot;FN1&quot;        &quot;GABRQ&quot;      &quot;CALHM6&quot;     &quot;AC004151.1&quot;
+##  [96] &quot;ITGAL&quot;      &quot;COTL1&quot;      &quot;SIRPG&quot;      &quot;APOE&quot;       &quot;PARP14&quot;    
+## [101] &quot;TLR10&quot;      &quot;LTB&quot;        &quot;HLA-DQA1&quot;   &quot;HLA-DPB1&quot;   &quot;KHDRBS2&quot;   
+## [106] &quot;GAB3&quot;       &quot;RAB39B&quot;     &quot;SIT1&quot;       &quot;TRAF1&quot;      &quot;DBH-AS1&quot;   
+## [111] &quot;RET&quot;        &quot;NCKAP1L&quot;    &quot;TRAV12-2&quot;   &quot;DPF3&quot;       &quot;IL21R&quot;     
+## [116] &quot;SNX20&quot;      &quot;MTRNR2L1&quot;   &quot;AC015911.7&quot; &quot;SP6&quot;        &quot;PLEKHF1&quot;   
+## [121] &quot;APOL4&quot;      &quot;RAB24&quot;      &quot;HLA-DQB2&quot;   &quot;CD1D&quot;       &quot;TRAF3IP3&quot;  
+## [126] &quot;TESC&quot;       &quot;RNF17&quot;      &quot;IKZF3&quot;      &quot;JAK3&quot;       &quot;RUNX3&quot;     
+## [131] &quot;CETP&quot;       &quot;PLEKHO1&quot;    &quot;IRF8&quot;       &quot;HS3ST3A1&quot;   &quot;AP003471.1&quot;
+## [136] &quot;SLC25A47&quot;   &quot;TRIM69&quot;     &quot;PSTPIP1&quot;    &quot;KIF21B&quot;     &quot;NPFFR1&quot;    
+## [141] &quot;LIMD2&quot;      &quot;APOL2&quot;      &quot;AOAH-IT1&quot;   &quot;TPSAB1&quot;     &quot;GIMAP4&quot;    
+## [146] &quot;KIFC3&quot;      &quot;TTC24&quot;      &quot;TRAC&quot;       &quot;AF131215.4&quot; &quot;WNT1&quot;      
+## [151] &quot;PLA2G7&quot;     &quot;CCND2&quot;      &quot;SASH3&quot;      &quot;AC139495.2&quot; &quot;AJ239328.1&quot;
+## [156] &quot;NCR1&quot;       &quot;ANXA6&quot;      &quot;LINC01934&quot;  &quot;VTCN1&quot;      &quot;LPXN&quot;      
+## [161] &quot;TRPM2&quot;      &quot;TRIB2&quot;      &quot;HLA-DQA2&quot;   &quot;ZSCAN1&quot;     &quot;GBGT1&quot;     
+## [166] &quot;AP000424.1&quot; &quot;SFMBT2&quot;     &quot;FERMT3&quot;     &quot;AL157871.2&quot; &quot;CYBC1&quot;     
+## [171] &quot;MFNG&quot;       &quot;LGR6&quot;       &quot;ATP5MC2P3&quot;  &quot;PLCB4&quot;      &quot;MIAT&quot;      
+## [176] &quot;CCR5&quot;       &quot;CYSLTR2&quot;    &quot;RGPD2&quot;      &quot;SOWAHD&quot;     &quot;LINC01588&quot; 
+## [181] &quot;DOCK2&quot;      &quot;POSTN&quot;      &quot;CD2&quot;        &quot;HEXD&quot;       &quot;FAM189A2&quot;  
+## [186] &quot;USP20&quot;      &quot;NDST2&quot;      &quot;P2RX7&quot;      &quot;AL512378.1&quot; &quot;MSC&quot;       
+## [191] &quot;GNGT2&quot;      &quot;LINC00299&quot;  &quot;AC136475.3&quot; &quot;MYO7A&quot;      &quot;SLC16A12&quot;  
+## [196] &quot;SLC24A4&quot;    &quot;AL023653.2&quot; &quot;AL512408.1&quot; &quot;AL365361.1&quot; &quot;GFI1&quot;      
+## [201] &quot;LINC00885&quot;  &quot;CAPG&quot;       &quot;CD79B&quot;      &quot;SCHIP1&quot;     &quot;HLA-DRA&quot;   
+## [206] &quot;PNMA3&quot;      &quot;ZDHHC14&quot;    &quot;LINC02694&quot;  &quot;RNF166&quot;     &quot;SECTM1&quot;    
+## [211] &quot;AC004585.1&quot; &quot;GBP4&quot;       &quot;BEND4&quot;      &quot;TNFRSF9&quot;    &quot;MT1XP1&quot;    
+## [216] &quot;AC100858.3&quot; &quot;AC138207.5&quot; &quot;ZNF826P&quot;    &quot;LINC01517&quot;  &quot;STXBP5L&quot;   
+## [221] &quot;AGAP2&quot;      &quot;PRKCH&quot;      &quot;HOTAIRM1&quot;   &quot;CSMD1&quot;      &quot;AP003119.3&quot;
+## [226] &quot;GPR35&quot;      &quot;AC022034.3&quot; &quot;APOL3&quot;      &quot;CD247&quot;      &quot;C6&quot;        
+## [231] &quot;UNC13D&quot;     &quot;ACP5&quot;       &quot;RGS19&quot;      &quot;GBP1&quot;       &quot;ARHGEF1&quot;   
+## [236] &quot;IL23R&quot;      &quot;RCSD1&quot;      &quot;BTLA&quot;       &quot;AC005224.3&quot; &quot;FASLG&quot;     
+## [241] &quot;ZNF831&quot;     &quot;CD74&quot;       &quot;MRO&quot;        &quot;CNTN3&quot;      &quot;NAPSB&quot;</code></pre>
+<pre class="r"><code>setdiff(nasal_limma, common_limma)</code></pre>
+<pre><code>##   [1] &quot;NTS&quot;        &quot;MAF&quot;        &quot;EXOC3L4&quot;    &quot;CALHM2&quot;     &quot;NTRK2&quot;     
+##   [6] &quot;GATA3&quot;      &quot;FGD2&quot;       &quot;CIITA&quot;      &quot;TMC8&quot;       &quot;CD7&quot;       
+##  [11] &quot;TRPV2&quot;      &quot;GBP5&quot;       &quot;CCDC88B&quot;    &quot;SLCO1B3&quot;    &quot;LINC02328&quot; 
+##  [16] &quot;XKR6&quot;       &quot;GVINP1&quot;     &quot;PLCB4&quot;      &quot;TMEM176B&quot;   &quot;PARVG&quot;     
+##  [21] &quot;APOL2&quot;      &quot;PLEKHF1&quot;    &quot;ADAP2&quot;      &quot;BMP7&quot;       &quot;NCKAP1L&quot;   
+##  [26] &quot;IL12RB1&quot;    &quot;CD180&quot;      &quot;APOL4&quot;      &quot;ABI3&quot;       &quot;IKZF1&quot;     
+##  [31] &quot;AF131215.6&quot; &quot;DOK2&quot;       &quot;SEPTIN1&quot;    &quot;FAM78A&quot;     &quot;SFMBT2&quot;    
+##  [36] &quot;SIPA1&quot;      &quot;APOE&quot;       &quot;ADCY7&quot;      &quot;FMNL3&quot;      &quot;DAB2&quot;      
+##  [41] &quot;PARP14&quot;     &quot;LINC01215&quot;  &quot;VASH1&quot;      &quot;VTCN1&quot;      &quot;DPP10&quot;     
+##  [46] &quot;TLL1&quot;       &quot;SEMA7A&quot;     &quot;AC008105.3&quot; &quot;PDGFA&quot;      &quot;SUCNR1&quot;    
+##  [51] &quot;AL159141.1&quot; &quot;DOCK10&quot;     &quot;CD40LG&quot;     &quot;COL6A3&quot;     &quot;ACAP1&quot;     
+##  [56] &quot;CALHM6&quot;     &quot;CYBB&quot;       &quot;GIMAP6&quot;     &quot;HLA-DRA&quot;    &quot;MYO1G&quot;     
+##  [61] &quot;TRIB2&quot;      &quot;TBC1D10C&quot;   &quot;SP6&quot;        &quot;MAP4K1&quot;     &quot;FGD5&quot;      
+##  [66] &quot;PLXND1&quot;     &quot;PRKCH&quot;      &quot;KIF21B&quot;     &quot;MYO7A&quot;      &quot;CYBC1&quot;     
+##  [71] &quot;RASAL3&quot;     &quot;ACP5&quot;       &quot;ARHGAP4&quot;    &quot;SLITRK6&quot;    &quot;AACSP1&quot;    
+##  [76] &quot;APOL3&quot;      &quot;TRAF3IP3&quot;   &quot;AL365361.1&quot; &quot;KIFC3&quot;      &quot;UBASH3A&quot;   
+##  [81] &quot;CAPG&quot;       &quot;CD74&quot;       &quot;ZAP70&quot;      &quot;IRF8&quot;       &quot;GIMAP4&quot;    
+##  [86] &quot;CD248&quot;      &quot;AC005224.3&quot; &quot;GPR35&quot;      &quot;TOX2&quot;       &quot;P2RX7&quot;     
+##  [91] &quot;TRAF1&quot;      &quot;TRIM69&quot;     &quot;CXCR3&quot;      &quot;CARMIL2&quot;    &quot;RAB24&quot;     
+##  [96] &quot;SMTNL1&quot;     &quot;SPN&quot;        &quot;SLC8A1&quot;     &quot;TPSAB1&quot;     &quot;CPVL&quot;      
+## [101] &quot;CD2&quot;        &quot;SLC26A5&quot;    &quot;CORO1A&quot;     &quot;ZNF831&quot;     &quot;HLA-DMB&quot;   
+## [106] &quot;RENBP&quot;      &quot;EDARADD&quot;    &quot;ZDHHC14&quot;    &quot;GIMAP1&quot;     &quot;HLA-F&quot;     
+## [111] &quot;IL32&quot;       &quot;HLA-DPB1&quot;   &quot;TMEM156&quot;    &quot;PML&quot;        &quot;NECAB1&quot;    
+## [116] &quot;ARHGEF1&quot;    &quot;DOCK2&quot;      &quot;COTL1&quot;      &quot;SYT11&quot;      &quot;TRANK1&quot;    
+## [121] &quot;LAIR1&quot;      &quot;EVL&quot;        &quot;RUNX3&quot;      &quot;HLA-DPA1&quot;   &quot;TENM1&quot;     
+## [126] &quot;TRPM2&quot;      &quot;EYA1&quot;       &quot;HLA-DRB6&quot;   &quot;CETP&quot;       &quot;SOCS1&quot;     
+## [131] &quot;GZMM&quot;       &quot;FAM189A2&quot;   &quot;USP20&quot;      &quot;PTPN7&quot;      &quot;ETV7&quot;      
+## [136] &quot;HEXD&quot;       &quot;ITGB7&quot;      &quot;PTPRQ&quot;      &quot;GABRQ&quot;      &quot;KRT8P3&quot;    
+## [141] &quot;CST1&quot;       &quot;APOL1&quot;      &quot;PCDHB8&quot;     &quot;AF131215.5&quot; &quot;ID2&quot;       
+## [146] &quot;ARRDC5&quot;     &quot;FCHSD1&quot;     &quot;PAG1&quot;       &quot;FNBP1&quot;      &quot;RGPD2&quot;     
+## [151] &quot;TRBC2&quot;      &quot;PLA2G7&quot;     &quot;AL512408.1&quot; &quot;CCR5&quot;       &quot;RNF17&quot;     
+## [156] &quot;GAB3&quot;       &quot;LPXN&quot;       &quot;LIMD2&quot;      &quot;GFI1&quot;       &quot;TRAC&quot;      
+## [161] &quot;GRB10&quot;      &quot;HLA-DMA&quot;    &quot;NPFFR1&quot;     &quot;MAFB&quot;       &quot;SLCO1B7&quot;   
+## [166] &quot;SIT1&quot;       &quot;HLA-E&quot;      &quot;PSTPIP1&quot;    &quot;MT1XP1&quot;     &quot;GBP2&quot;      
+## [171] &quot;A2M&quot;        &quot;GIMAP8&quot;     &quot;PCED1B-AS1&quot; &quot;CSMD1&quot;      &quot;NRN1&quot;      
+## [176] &quot;TSHZ2&quot;      &quot;ETS1&quot;       &quot;CYSLTR2&quot;    &quot;AC004151.1&quot; &quot;TRGV4&quot;     
+## [181] &quot;GBP1&quot;       &quot;AOAH-IT1&quot;   &quot;LINC01517&quot;  &quot;CLIP2&quot;      &quot;RELL2&quot;     
+## [186] &quot;AF127936.1&quot; &quot;TESC&quot;       &quot;WASF3&quot;      &quot;SLC2A6&quot;     &quot;GBGT1&quot;     
+## [191] &quot;PLEKHO1&quot;    &quot;TIFAB&quot;      &quot;ANXA6&quot;      &quot;NDST2&quot;      &quot;CD52&quot;      
+## [196] &quot;CNTN3&quot;      &quot;RNF213&quot;     &quot;UGT2A1&quot;     &quot;ESRRB&quot;      &quot;CD1D&quot;      
+## [201] &quot;AL157871.2&quot; &quot;PLCE1&quot;      &quot;AC117464.1&quot; &quot;SCHIP1&quot;     &quot;CD244&quot;     
+## [206] &quot;CPA3&quot;       &quot;HLA-DRB5&quot;   &quot;AP000424.1&quot; &quot;JAK3&quot;       &quot;TTC24&quot;     
+## [211] &quot;SLCO2B1&quot;    &quot;TFEC&quot;       &quot;PIM1&quot;       &quot;TNIP3&quot;      &quot;SECTM1&quot;    
+## [216] &quot;GLS&quot;        &quot;MPEG1&quot;      &quot;WNT1&quot;       &quot;AF131215.4&quot; &quot;HAVCR2&quot;    
+## [221] &quot;AC138207.5&quot; &quot;AC139769.1&quot; &quot;RCSD1&quot;      &quot;NLRC5&quot;      &quot;CYP2B6&quot;    
+## [226] &quot;SNX20&quot;      &quot;C1QC&quot;       &quot;SASH3&quot;      &quot;MEI1&quot;       &quot;PPP2R2B&quot;   
+## [231] &quot;CXCR6&quot;      &quot;IKZF3&quot;      &quot;GBP4&quot;       &quot;LMCD1&quot;      &quot;ITGAL&quot;     
+## [236] &quot;PIEZO2&quot;     &quot;TNFRSF14&quot;   &quot;HERC2P2&quot;    &quot;GIMAP5&quot;     &quot;SLC25A47&quot;  
+## [241] &quot;PIK3R6&quot;     &quot;MT1G&quot;       &quot;MSR1&quot;       &quot;AC083837.1&quot; &quot;SOWAHD&quot;    
+## [246] &quot;TGFBI&quot;      &quot;ZDHHC15&quot;</code></pre>
+</div>
+<div id="significant-genes-for-lps-treatment-group-only" class="section level3">
+<h3>Significant genes for LPS Treatment group only</h3>
+<pre class="r"><code>setdiff(LPS_deseq, common_deseq)</code></pre>
+<pre><code>##   [1] &quot;IGHG4&quot;         &quot;MEOX1&quot;         &quot;IGHA1&quot;         &quot;BTNL9&quot;        
+##   [5] &quot;IGHA2&quot;         &quot;KLHL9&quot;         &quot;IGHV3-74&quot;      &quot;TEX9&quot;         
+##   [9] &quot;COCH&quot;          &quot;GPR55&quot;         &quot;JAZF1&quot;         &quot;PPP1R21&quot;      
+##  [13] &quot;CERKL&quot;         &quot;IGKV2D-29&quot;     &quot;ENAM&quot;          &quot;ITGA4&quot;        
+##  [17] &quot;ADAM12&quot;        &quot;IGLV1-51&quot;      &quot;CYB561D1&quot;      &quot;MIR9-3HG&quot;     
+##  [21] &quot;FBXO32&quot;        &quot;APOBEC3H&quot;      &quot;FAM149A&quot;       &quot;MZB1&quot;         
+##  [25] &quot;METTL2B&quot;       &quot;IGLV10-54&quot;     &quot;PARM1&quot;         &quot;IGKV2-30&quot;     
+##  [29] &quot;SCG3&quot;          &quot;IGHGP&quot;         &quot;IGLV2-23&quot;      &quot;IGKV1-6&quot;      
+##  [33] &quot;TIGIT&quot;         &quot;CD84&quot;          &quot;IGHV3-66&quot;      &quot;RPS2P7&quot;       
+##  [37] &quot;NCK1&quot;          &quot;KIAA1671&quot;      &quot;MRC2&quot;          &quot;ZNF683&quot;       
+##  [41] &quot;CCR4&quot;          &quot;SCART1&quot;        &quot;STYK1&quot;         &quot;ST8SIA1&quot;      
+##  [45] &quot;FHDC1&quot;         &quot;TMEM219&quot;       &quot;ADK&quot;           &quot;TPSB2&quot;        
+##  [49] &quot;WDR5B&quot;         &quot;IGLC2&quot;         &quot;IGHV3-33&quot;      &quot;IGHV3-7&quot;      
+##  [53] &quot;HLA-DQB1&quot;      &quot;ZNF396&quot;        &quot;IGHG2&quot;         &quot;CCL3-AS1&quot;     
+##  [57] &quot;MLLT1&quot;         &quot;DDIT3&quot;         &quot;RNF8&quot;          &quot;CCR5AS&quot;       
+##  [61] &quot;LERFS&quot;         &quot;ITPKB&quot;         &quot;GASK1B&quot;        &quot;IGHV3-13&quot;     
+##  [65] &quot;IGLL5&quot;         &quot;ZNF25&quot;         &quot;TMEM9B-AS1&quot;    &quot;HNF1B&quot;        
+##  [69] &quot;IL17F&quot;         &quot;IRAK4&quot;         &quot;IL21-AS1&quot;      &quot;TRIM2&quot;        
+##  [73] &quot;IGLV7-43&quot;      &quot;GCSIR&quot;         &quot;CCN2&quot;          &quot;LIN7C&quot;        
+##  [77] &quot;TNFSF11&quot;       &quot;CD300LB&quot;       &quot;IGLV2-11&quot;      &quot;COPZ2&quot;        
+##  [81] &quot;RNF32-DT&quot;      &quot;ZNF358&quot;        &quot;MIR155HG&quot;      &quot;PLAAT4&quot;       
+##  [85] &quot;MMD&quot;           &quot;CYP4F29P&quot;      &quot;NR1H3&quot;         &quot;HOMER2&quot;       
+##  [89] &quot;EDEM1&quot;         &quot;FAM110C&quot;       &quot;FLT4&quot;          &quot;FANCI&quot;        
+##  [93] &quot;PEG10&quot;         &quot;IGKV6-21&quot;      &quot;IGLC3&quot;         &quot;ACP2&quot;         
+##  [97] &quot;CLHC1&quot;         &quot;MT-TP&quot;         &quot;IGLV1-47&quot;      &quot;IGLV7-46&quot;     
+## [101] &quot;GSKIP&quot;         &quot;DNAI3&quot;         &quot;NAA50&quot;         &quot;NT5C3B&quot;       
+## [105] &quot;DENND2D&quot;       &quot;MSL2&quot;          &quot;TRAV17&quot;        &quot;CCL24&quot;        
+## [109] &quot;BIN2&quot;          &quot;AICDA&quot;         &quot;TWIST1&quot;        &quot;METTL14&quot;      
+## [113] &quot;EOMES&quot;         &quot;CLMP&quot;          &quot;ZNF641&quot;        &quot;ERCC6L2-AS1&quot;  
+## [117] &quot;HLA-DRB5&quot;      &quot;IGHV3-72&quot;      &quot;IGHV3-43&quot;      &quot;HLA-DPA3&quot;     
+## [121] &quot;WASH5P&quot;        &quot;PPCS&quot;          &quot;PKD1P5&quot;        &quot;FAM81A&quot;       
+## [125] &quot;PIP4K2C&quot;       &quot;FTH1P22&quot;       &quot;SCARB1&quot;        &quot;NR4A1&quot;        
+## [129] &quot;ASMTL&quot;         &quot;RCAN2&quot;         &quot;TMLHE&quot;         &quot;IGLV3-21&quot;     
+## [133] &quot;TRGC2&quot;         &quot;LINC01694&quot;     &quot;LINC01781&quot;     &quot;H3C10&quot;        
+## [137] &quot;RASSF2&quot;        &quot;COL1A1&quot;        &quot;CRACDL&quot;        &quot;BTN3A3&quot;       
+## [141] &quot;GYG1&quot;          &quot;NPR1&quot;          &quot;RCC2&quot;          &quot;TRAV39&quot;       
+## [145] &quot;CPSF6&quot;         &quot;GALNT8&quot;        &quot;FURIN&quot;         &quot;MICU3&quot;        
+## [149] &quot;FAM241A&quot;       &quot;EFHC2&quot;         &quot;GNL1&quot;          &quot;IGKV1-12&quot;     
+## [153] &quot;SPDYE6&quot;        &quot;TMEM178B&quot;      &quot;TRGV8&quot;         &quot;LINC01644&quot;    
+## [157] &quot;S100Z&quot;         &quot;IGHV3-53&quot;      &quot;MARK1&quot;         &quot;IQGAP2&quot;       
+## [161] &quot;IGLV2-14&quot;      &quot;LINC02968&quot;     &quot;SLC66A3&quot;       &quot;FKBP5&quot;        
+## [165] &quot;METTL8&quot;        &quot;WASHC5&quot;        &quot;FOXP3&quot;         &quot;PRAMENP&quot;      
+## [169] &quot;KLC2&quot;          &quot;SH3BGRL2&quot;      &quot;PLAAT2&quot;        &quot;LINC00511&quot;    
+## [173] &quot;TOMM40&quot;        &quot;MYO1D&quot;         &quot;ATF7IP&quot;        &quot;GJB6&quot;         
+## [177] &quot;PTPN13&quot;        &quot;TBC1D22A&quot;      &quot;FAM8A1&quot;        &quot;SYBU&quot;         
+## [181] &quot;UCHL1&quot;         &quot;SPINT2&quot;        &quot;IGHG1&quot;         &quot;NSMCE1-DT&quot;    
+## [185] &quot;LINC02384&quot;     &quot;PLPP2&quot;         &quot;XCL2&quot;          &quot;SPATC1&quot;       
+## [189] &quot;SHISA8&quot;        &quot;SDE2&quot;          &quot;TSPAN31&quot;       &quot;COMMD4&quot;       
+## [193] &quot;LINC01480&quot;     &quot;TRPS1&quot;         &quot;CDC37L1&quot;       &quot;ACVRL1&quot;       
+## [197] &quot;KSR1&quot;          &quot;IGKV1-5&quot;       &quot;RANBP1&quot;        &quot;CDH1&quot;         
+## [201] &quot;SPRYD7&quot;        &quot;STAMBP&quot;        &quot;ITM2C&quot;         &quot;PNRC2&quot;        
+## [205] &quot;PNMA2&quot;         &quot;ARID1B&quot;        &quot;IGHV1-3&quot;       &quot;LINC02086&quot;    
+## [209] &quot;RFX2&quot;          &quot;KMT2D&quot;         &quot;FANK1&quot;         &quot;RAB27A&quot;       
+## [213] &quot;IGKV2D-40&quot;     &quot;HRK&quot;           &quot;SLAMF6&quot;        &quot;NINL&quot;         
+## [217] &quot;COL5A1&quot;        &quot;CRBN&quot;          &quot;ANKRD20A11P&quot;   &quot;VWA5A&quot;        
+## [221] &quot;TIMM23B-AGAP6&quot; &quot;CFB&quot;           &quot;IGKV2-29&quot;      &quot;MTARC2&quot;       
+## [225] &quot;SLA2&quot;          &quot;STK38&quot;         &quot;SETD7&quot;         &quot;HENMT1&quot;       
+## [229] &quot;NEFH&quot;          &quot;SYNGR2&quot;        &quot;THRB&quot;          &quot;VPS26C&quot;       
+## [233] &quot;MT1B&quot;          &quot;ZNF385C&quot;       &quot;CCDC85C&quot;       &quot;LINC01214&quot;    
+## [237] &quot;GPR173&quot;        &quot;MT1F&quot;          &quot;FGF13&quot;         &quot;FUBP1&quot;        
+## [241] &quot;ZNF226&quot;        &quot;LINC01229&quot;     &quot;HYDIN&quot;         &quot;SLC4A10&quot;      
+## [245] &quot;MAP6&quot;</code></pre>
+<pre class="r"><code>setdiff(LPS_limma, common_limma)</code></pre>
+<pre><code>##   [1] &quot;IGHG4&quot;          &quot;BTNL9&quot;          &quot;IGHA2&quot;          &quot;JAZF1&quot;         
+##   [5] &quot;PARM1&quot;          &quot;ADAM12&quot;         &quot;IGHA1&quot;          &quot;LINC01781&quot;     
+##   [9] &quot;MARK1&quot;          &quot;TEX9&quot;           &quot;FAM149A&quot;        &quot;COCH&quot;          
+##  [13] &quot;MEOX1&quot;          &quot;ENAM&quot;           &quot;CCN2&quot;           &quot;IGHV3-74&quot;      
+##  [17] &quot;IGHG2&quot;          &quot;IGLV10-54&quot;      &quot;IGHGP&quot;          &quot;IGHG1&quot;         
+##  [21] &quot;GPR55&quot;          &quot;CERKL&quot;          &quot;AICDA&quot;          &quot;IGHV3-72&quot;      
+##  [25] &quot;ITGA4&quot;          &quot;COL5A1&quot;         &quot;IGLV2-23&quot;       &quot;MRC2&quot;          
+##  [29] &quot;IGHJ2&quot;          &quot;UCHL1&quot;          &quot;IGLV2-11&quot;       &quot;IGLV2-8&quot;       
+##  [33] &quot;IGLV7-43&quot;       &quot;IL17F&quot;          &quot;NCAN&quot;           &quot;IGHV3-64&quot;      
+##  [37] &quot;IGLC2&quot;          &quot;IRAG1&quot;          &quot;IGLV2-14&quot;       &quot;S100Z&quot;         
+##  [41] &quot;MTND4P24&quot;       &quot;TGFB2&quot;          &quot;NPR1&quot;           &quot;MIR9-3HG&quot;      
+##  [45] &quot;MNS1&quot;           &quot;IGLV1-47&quot;       &quot;IGLV3-21&quot;       &quot;IGLL5&quot;         
+##  [49] &quot;IGLV2-18&quot;       &quot;PEG10&quot;          &quot;KLHL9&quot;          &quot;IGHV3-33&quot;      
+##  [53] &quot;SMTNL2&quot;         &quot;IGKV1D-16&quot;      &quot;LINC01644&quot;      &quot;HNF1B&quot;         
+##  [57] &quot;PLPP2&quot;          &quot;IGHV5-51&quot;       &quot;IGHV3-53&quot;       &quot;IGLV7-46&quot;      
+##  [61] &quot;IGKV2D-29&quot;      &quot;METTL2B&quot;        &quot;IGHV3-13&quot;       &quot;IGHV3-7&quot;       
+##  [65] &quot;IGKV2-30&quot;       &quot;IGLV1-51&quot;       &quot;SCART1&quot;         &quot;IGLV1-36&quot;      
+##  [69] &quot;FBXO32&quot;         &quot;HRK&quot;            &quot;RPS2P7&quot;         &quot;IGKV2D-24&quot;     
+##  [73] &quot;EYA2&quot;           &quot;TMLHE&quot;          &quot;RNF32-DT&quot;       &quot;LINC00511&quot;     
+##  [77] &quot;SPDYE6&quot;         &quot;ZYG11A&quot;         &quot;GCSIR&quot;          &quot;IGKV1-27&quot;      
+##  [81] &quot;LINC01480&quot;      &quot;IGLV1-44&quot;       &quot;MZB1&quot;           &quot;LINC01013&quot;     
+##  [85] &quot;STYK1&quot;          &quot;ZNF396&quot;         &quot;IGHV3-69-1&quot;     &quot;SLITRK5&quot;       
+##  [89] &quot;MLLT1&quot;          &quot;HLA-DQB1&quot;       &quot;IGHJ1P&quot;         &quot;CYB561D1&quot;      
+##  [93] &quot;FLT4&quot;           &quot;IGHE&quot;           &quot;LIAT1&quot;          &quot;IGKV1-16&quot;      
+##  [97] &quot;IGKV1-6&quot;        &quot;LINC01484&quot;      &quot;IGHV3-66&quot;       &quot;TRIM2&quot;         
+## [101] &quot;DDIT3&quot;          &quot;ZNF358&quot;         &quot;SCARB1&quot;         &quot;IGLV1-40&quot;      
+## [105] &quot;MYT1&quot;           &quot;SYBU&quot;           &quot;MIR8071-2&quot;      &quot;CCR4&quot;          
+## [109] &quot;ZNF25&quot;          &quot;IGLV3-25&quot;       &quot;POF1B&quot;          &quot;ERCC6L2-AS1&quot;   
+## [113] &quot;IGKV2D-40&quot;      &quot;COPZ2&quot;          &quot;IGHV3-43&quot;       &quot;WASH5P&quot;        
+## [117] &quot;CYP4F29P&quot;       &quot;RFX2&quot;           &quot;IGHV1-24&quot;       &quot;RORC&quot;          
+## [121] &quot;MT-TP&quot;          &quot;PRKXP1&quot;         &quot;FHDC1&quot;          &quot;TTC36-AS1&quot;     
+## [125] &quot;IGHV6-1&quot;        &quot;TCL6&quot;           &quot;IL21-AS1&quot;       &quot;PPP1R21&quot;       
+## [129] &quot;IGHJ4&quot;          &quot;NCK1&quot;           &quot;SYT4&quot;           &quot;SLC2A5&quot;        
+## [133] &quot;SYNE3-AS1&quot;      &quot;FAM81A&quot;         &quot;IGKV3-7&quot;        &quot;L1TD1&quot;         
+## [137] &quot;HOMER2&quot;         &quot;IGKV1-12&quot;       &quot;GALNT8&quot;         &quot;LINC00173&quot;     
+## [141] &quot;FOXP3&quot;          &quot;CRACDL&quot;         &quot;PPCS&quot;           &quot;IGKV4-1&quot;       
+## [145] &quot;KCNN3&quot;          &quot;LRRC32&quot;         &quot;AFMID&quot;          &quot;TK1&quot;           
+## [149] &quot;BLACE&quot;          &quot;CHIT1&quot;          &quot;MTARC2&quot;         &quot;NUTM2F&quot;        
+## [153] &quot;IGHV3-49&quot;       &quot;IGKV1-5&quot;        &quot;IGHV2-70&quot;       &quot;IGHD6-25&quot;      
+## [157] &quot;CDH1&quot;           &quot;SLC4A10&quot;        &quot;IGLC3&quot;          &quot;ALPL&quot;          
+## [161] &quot;MOXD1&quot;          &quot;LINC02968&quot;      &quot;IGKV1-9&quot;        &quot;PLAAT4&quot;        
+## [165] &quot;RNF8&quot;           &quot;SLC16A14&quot;       &quot;ZNF385C&quot;        &quot;BHLHA15&quot;       
+## [169] &quot;COLCA1&quot;         &quot;CUTALP&quot;         &quot;ANO7&quot;           &quot;OACYLP&quot;        
+## [173] &quot;LINC02947&quot;      &quot;PLD5&quot;           &quot;APOBEC3H&quot;       &quot;AP1S3&quot;         
+## [177] &quot;ADK&quot;            &quot;NR2E3&quot;          &quot;IGHV3-30&quot;       &quot;IGLV3-12&quot;      
+## [181] &quot;TNFSF11&quot;        &quot;IGHJ6&quot;          &quot;EVA1A&quot;          &quot;LINC01694&quot;     
+## [185] &quot;WDR5B&quot;          &quot;RPL36A-HNRNPH2&quot; &quot;CLMP&quot;           &quot;DENND2D&quot;       
+## [189] &quot;MIR155HG&quot;       &quot;SLC22A3&quot;        &quot;SHISA8&quot;         &quot;FANCI&quot;         
+## [193] &quot;PXMP2&quot;          &quot;SETD7&quot;          &quot;PLPP7&quot;          &quot;IL17A&quot;         
+## [197] &quot;DERL3&quot;          &quot;IGHV1-18&quot;       &quot;LARGE2&quot;         &quot;FSCN2&quot;         
+## [201] &quot;IGHV3-11&quot;       &quot;NAA50&quot;          &quot;TBX4&quot;           &quot;CBFA2T3&quot;       
+## [205] &quot;MAP2&quot;           &quot;RANBP1P1&quot;       &quot;MILIP&quot;          &quot;LMNA&quot;          
+## [209] &quot;ARL14&quot;          &quot;NSMCE1-DT&quot;      &quot;IGKV1D-39&quot;      &quot;CATSPERD&quot;      
+## [213] &quot;LINC01605&quot;      &quot;IGHV3-23&quot;       &quot;CD300LB&quot;        &quot;NEFH&quot;          
+## [217] &quot;FUT10&quot;          &quot;IGKV2-24&quot;       &quot;KCNQ1&quot;          &quot;IGHJ3&quot;         
+## [221] &quot;IGKV1-39&quot;       &quot;NR4A1&quot;          &quot;TGIF2-RAB5IF&quot;   &quot;GLYATL2&quot;       
+## [225] &quot;FANK1&quot;          &quot;TRGV8&quot;          &quot;SMPD4P1&quot;        &quot;TIGIT&quot;         
+## [229] &quot;IGHV4-59&quot;       &quot;SOD1-DT&quot;        &quot;PIP5K1B&quot;        &quot;LINGO4&quot;        
+## [233] &quot;SLC66A3&quot;        &quot;NAT8B&quot;          &quot;CD70&quot;           &quot;RASSF6&quot;        
+## [237] &quot;MACROD2&quot;        &quot;CA8&quot;            &quot;IGKV3-15&quot;       &quot;UBE2QL1&quot;       
+## [241] &quot;TMEM219&quot;        &quot;MAML3&quot;          &quot;CLDN14&quot;         &quot;KCNK10&quot;        
+## [245] &quot;TPST2&quot;          &quot;MTARC1&quot;         &quot;RNF182&quot;</code></pre>
+</div>
+<div id="similarity-coefficients-for-nasal-v.-pbmc-limma-deseq-analyses-1" class="section level3">
+<h3>Similarity Coefficients for Nasal v. PBMC Limma, DESeq analyses</h3>
+<pre class="r"><code>print(&quot;DESeq similarity coefficient for Nasal v. PBMC samples&quot;)</code></pre>
+<pre><code>## [1] &quot;DESeq similarity coefficient for Nasal v. PBMC samples&quot;</code></pre>
+<pre class="r"><code>length(common_deseq) / length(union(nasal_deseq, LPS_deseq))</code></pre>
+<pre><code>## [1] 0.01010101</code></pre>
+<pre class="r"><code>print(&quot;LIMMA similarity coefficient for Nasal v. PBMC samples&quot;)</code></pre>
+<pre><code>## [1] &quot;LIMMA similarity coefficient for Nasal v. PBMC samples&quot;</code></pre>
+<pre class="r"><code>length(common_limma) / length(union(nasal_limma, LPS_limma))</code></pre>
+<pre><code>## [1] 0.006036217</code></pre>
 </div>
 </div>
 
