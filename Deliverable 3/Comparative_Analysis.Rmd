@@ -26,44 +26,46 @@ library(readr)
 
 ```{r}
 # WD set to /Deliverable 3/data directory
-# setwd("~/Documents/.../Meta-omic-Analysis-Capstone/Deliverable 3/data")
+# setwd("~/Documents/.../Meta-omic-Analysis-Capstone/Deliverable 3")
 
-results_1_df <- read_csv("NasalCVID_results_top250.csv")
+results_1_df <- read_csv("data/NasalCVID_results_top250.csv")
 nasal_deseq <- results_1_df$deseq250
 nasal_limma <- results_1_df$limma250
 
-results_2_df <- read_csv("PBMC_results_top250.csv")
-ctrl_deseq <- results_df$ctrl_deseq
-ctrl_limma <- results_df$ctrl_limma
-LPS_deseq <- results_df$LPS_deseq
-LPS_limma <- results_df$LPS_limma
+results_2_df <- read_csv("data/PBMC_results_top250.csv")
+ctrl_deseq <- results_2_df$ctrl_deseq
+ctrl_limma <- results_2_df$ctrl_limma
+LPS_deseq <- results_2_df$LPS_deseq
+LPS_limma <- results_2_df$LPS_limma
 
 ```
 
 ## Comparison {.tabset}
 
-### Common Significant genes: LPS v. Healthy Control
+### LPS v. Healthy Control {.tabset}
+
+#### Common Significant genes
 
 ```{r}
 (common_deseq <- intersect(LPS_deseq, ctrl_deseq))
 (common_limma <- intersect(LPS_limma, ctrl_limma))
 ```
 
-### Significant genes for LPS group only
+#### Significant genes for LPS group only
 
 ```{r}
 setdiff(LPS_deseq, common_deseq)
 setdiff(LPS_limma, common_limma)
 ```
 
-### Significant genes for Control group only
+#### Significant genes for Control group only
 
 ```{r}
 setdiff(ctrl_deseq, common_deseq)
 setdiff(ctrl_limma, common_limma)
 ```
 
-### Similarity Coefficients for Limma, DESeq analyses
+#### Similarity Coefficients for Limma, DESeq analyses
 
 ```{r}
 print("DESeq similarity coefficient")
@@ -73,9 +75,7 @@ print("LIMMA similarity coefficient")
 length(common_limma) / length(union(LPS_limma, ctrl_limma))
 ```
 
-### Nasal and Control PBMC - DESeq
-
-### Nasal and Control PBMC - Limma
+### Nasal and Control PBMC {.tabset}
 
 #### Common Significant genes:
 
@@ -100,7 +100,7 @@ setdiff(ctrl_deseq, common_deseq)
 setdiff(ctrl_limma, common_limma)
 ```
 
-### Similarity Coefficients for Nasal v. PBMC Limma, DESeq analyses
+#### Similarity Coefficients for Nasal v. PBMC Limma, DESeq analyses
 
 ```{r}
 
