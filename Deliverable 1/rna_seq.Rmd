@@ -31,6 +31,8 @@ library(tidyverse)
 library(DT)
 library(GSVA)
 library(enrichR)
+library(rprojroot)
+library(fs)
 
 # define pathway libraries
 dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
@@ -362,4 +364,24 @@ datatable(enriched$Panther_2016)
 ###### Limma Reactome
 ```{r}
 datatable(enriched$Reactome_2016)
+```
+
+## Creating CSV for Further Comparative Analysis
+```{r}
+#combine result lists into dataframe
+
+results_1_df <- data.frame(deseq250 = deseq250,
+                           limma250 = limma250) 
+
+# obtain project directory
+project_root <- rprojroot::find_root(has_dir("Meta-omic-Analysis-Capstone"))
+# obtain comparison analysis directory
+relative_path <- file.path("Meta-omic-Analysis-Capstone/Deliverable 3")
+# file's output path
+output_path <- fs::path(project_root,
+                         relative_path, "data",
+                         "NasalCVID_results_top250.csv")
+# write .csv file into Deliverable 3 folder
+write_csv(x=results_1_df, file=output_path)
+
 ```

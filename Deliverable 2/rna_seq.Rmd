@@ -32,6 +32,9 @@ library(DT)
 library(GSVA)
 library(enrichR)
 library(biomaRt)
+library(rprojroot)
+library(fs)
+library(dplyr)
 
 # define pathway libraries
 dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
@@ -169,6 +172,7 @@ g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=disease)) +
 
 plot(g)
 ```
+
 #### PCA (Coloring Treatment Groups)
 
 ```{r}
@@ -218,7 +222,8 @@ As we can observe, the treatment variable overwhelms the dimension reduction, in
 
 # Group Analyses {.tabset}
 
-## LPS Group
+## LPS Treatment Group
+
 ```{r LPS_vars, include=FALSE}
 counts <- assay(se_cvid_LPS, "counts")
 meta_data <- colData(se_cvid_LPS)
@@ -226,10 +231,9 @@ disease <- meta_data$disease
 group <- meta_data$disease
 ```
 
-
 ### Visualization and Dimension reduction {.tabset}
 
-#### PCA 
+#### PCA LPS Group
 
 ```{r}
 # fit PCA model to log cpm data for LPS treatment group
@@ -251,7 +255,7 @@ g <- pca_plot %>% ggplot(aes(x=PC1, y=PC2, color=disease)) +
 plot(g)
 ```
 
-#### UMAP 
+#### UMAP LPS Group
 
 ```{r}
 # fit UMAP model to log cpm data
@@ -456,7 +460,7 @@ LPS_deseq <- deseq250
 LPS_limma <- limma250
 ```
 
-## Treatment Group
+## Healthy Control Group
 
 ```{r ctrl_vars, include=FALSE}
 counts <- assay(se_cvid_ctrl, "counts")
@@ -467,10 +471,10 @@ group <- meta_data$disease
 
 ### Visualization and Dimension reduction {.tabset}
 
-#### PCA 
+#### PCA Healthy Group
 
 ```{r}
-# fit PCA model to log cpm data for LPS treatment group
+# fit PCA model to log cpm data for healthy control group
 # note: transpose data to make it tidy
 set.seed(1)
 pca_out <- prcomp(t(assay(se_cvid_ctrl,"log_counts_cpm")))
@@ -489,7 +493,7 @@ g <- pca_plot %>% ggplot(aes(x=PC1, y=PC2, color=disease)) +
 plot(g)
 ```
 
-#### UMAP 
+#### UMAP Healthy Group
 
 ```{r}
 # fit UMAP model to log cpm data
@@ -692,34 +696,28 @@ datatable(enriched$Reactome_2016)
 ```{r ctrl_out, include=FALSE}
 ctrl_deseq <- deseq250
 ctrl_limma <- limma250
+
 ```
 
-## Comparison {.tabset}
 
-### Common Significant genes
+### Creating CSV for Comparative Analysis
 ```{r}
-(common_deseq <- intersect(LPS_deseq, ctrl_deseq))
-(common_lima <- intersect(LPS_limma, ctrl_limma))
+#combine result lists into dataframe
+
+results_2_df <- data.frame(ctrl_deseq=ctrl_deseq,
+                           ctrl_limma=ctrl_limma,
+                           LPS_deseq=LPS_deseq,
+                           LPS_limma=LPS_limma) 
+
+# obtain project directory
+project_root <- rprojroot::find_root(has_dir("Meta-omic-Analysis-Capstone"))
+# obtain comparison analysis directory
+relative_path <- file.path("Meta-omic-Analysis-Capstone/Deliverable 3")
+# file's output path
+output_path <- fs::path(project_root,
+                         relative_path, "data",
+                         "PBMC_results_top250.csv")
+# write .csv file into Deliverable 3 folder
+write_csv(x=results_2_df, file=output_path)
+
 ```
-
-### Significant genes for LPS group only
-```{r}
-setdiff(LPS_deseq, common_deseq)
-setdiff(LPS_limma, common_lima)
-```
-
-
-### Significant genes for Control group only
-```{r}
-setdiff(ctrl_deseq, common_deseq)
-setdiff(ctrl_limma, common_lima)
-```
-
-### Similarity Coefficients
-```{r}
-length(common_deseq) / length(union(LPS_deseq, ctrl_deseq))
-length(common_lima) / length(union(LPS_limma, ctrl_limma))
-```
-
-
-
