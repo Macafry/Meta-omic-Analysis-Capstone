@@ -1,0 +1,117 @@
+---
+title: "Presentation"
+author: "W. Evan Johnson, Ph.D., Ian Mc Farlane, Bram Stults"
+date: "`r Sys.Date()`"
+output: slidy_presentation
+header-includes:
+   - \usepackage{amsmath}
+editor_options: 
+  chunk_output_type: console
+tables: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readr)
+library(Rsubread)
+library(Rsamtools)
+library(SummarizedExperiment)
+library(edgeR)
+library(DESeq2)
+library(ComplexHeatmap)
+library(TBSignatureProfiler)
+library(umap)
+library(tidyverse)
+library(DT)
+library(GSVA)
+library(enrichR)
+library(biomaRt)
+library(rprojroot)
+library(fs)
+library(dplyr)
+
+# define pathway libraries
+dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
+
+```
+
+# Nasal Data
+
+
+```{r include=FALSE}
+
+# read RNA expression counts
+counts <- read.table("data/features_combined.txt", sep="\t", 
+                     header=T, row.names=1)
+# read patient data
+meta_data <- read.table("data/meta_data.txt", sep="\t", 
+                     header=T, row.names=1)
+
+# isolate group indicator variable
+group <- meta_data$Condition
+
+# aggregate patient and expression data into a single object
+se_immunedef <- SummarizedExperiment(assays=list(counts=counts),
+                     colData = meta_data)
+
+# create counts per million, log counts and log counts per million features 
+# and save them into new assays.
+se_immunedef <- mkAssay(se_immunedef, log = TRUE, counts_to_CPM = TRUE)
+
+# display all assays
+assays(se_immunedef)
+```
+
+## Visualization and Dimension reduction - PCA
+
+```{r echo=FALSE}
+# fit PCA model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+pca_out <- prcomp(t(assay(se_immunedef,"log_counts_cpm")))
+
+# define dataframe with PCA components and immune deficiency condition (IDC)
+pca_plot <- as.data.frame(pca_out$x) # X, Y, ...
+pca_plot$Condition <- as.factor(se_immunedef$Condition) # color/group
+
+# plot PC1 and PC2 by IDC
+g <- pca_plot %>% ggplot(aes(x=PC1, y=PC2, color=Condition)) +
+  geom_point(size=1.5) + xlab("PCA1") + ylab("PCA2") +
+  geom_text(label=colnames(se_immunedef), nudge_y = 5,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("PCA Plot")
+
+plot(g)
+```
+
+## Visualization and Dimension reduction - PCA
+
+```{r echo=FALSE}
+# fit UMAP model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+umap.defaults$n_neighbors=5
+umap_out <- umap(t(assay(se_immunedef,"log_counts_cpm")), config = umap.defaults)
+
+# define dataframe with UMAP dimensions and IDC
+umap_plot <- as.data.frame(umap_out$layout) # X, Y, ...
+umap_plot$Condition <- as.factor(se_immunedef$Condition) # color / group
+
+# plot UMAP1 and UMAP2 by IDC
+g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=Condition)) +
+  geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
+  geom_text(label=colnames(se_immunedef), nudge_y = 0.1,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("UMAP Plot")
+
+plot(g)
+```
+
+# Blood Data
+
+
+# Comparison
+
+
+
