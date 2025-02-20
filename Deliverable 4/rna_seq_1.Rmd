@@ -43,10 +43,10 @@ dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
 ```{r}
 
 # read RNA expression counts
-counts <- read.table("features_combined.txt", sep="\t", 
+counts <- read.table("data/features_combined.txt", sep="\t", 
                      header=T, row.names=1)
 # read patient data
-meta_data <- read.table("meta_data.txt", sep="\t", 
+meta_data <- read.table("data/meta_data.txt", sep="\t", 
                      header=T, row.names=1)
 
 # isolate group indicator variable
@@ -80,7 +80,7 @@ pca_plot$Condition <- as.factor(se_immunedef$Condition) # color/group
 
 # plot PC1 and PC2 by IDC
 g <- pca_plot %>% ggplot(aes(x=PC1, y=PC2, color=Condition)) +
-  geom_point(size=1.5) + xlab("PCA1") + ylab("PCA2") +
+  geom_point(size=1.5) + xlab("PC 1") + ylab("PC 2") +
   geom_text(label=colnames(se_immunedef), nudge_y = 5,) +
   theme(plot.title = element_text(hjust = 0.5)) +
   ggtitle("PCA Plot")
@@ -135,8 +135,8 @@ res <- results(dds)[order(results(dds)[,6]),]
 # dislpay results for the top 1000 most significant genes
 datatable(data.frame(res[1:1000,]))
 
-# store the name of the top 250 most significant genes
-deseq250 <- rownames(res)[1:250]
+# store the name of the top 1000 most significant genes, per Dr. Johnson
+deseq1000 <- rownames(res)[1:1000]
 ``` 
 
 #### Heatmap of DEGs (DESeq2)
@@ -146,8 +146,10 @@ deseq250 <- rownames(res)[1:250]
 
 # rownames(results(dds)[order(results(dds)$padj),]) # get the name of the genes ordered by adjusted p-val
 # as.matrix(assay(se_immunedef,"log_counts_cpm")) # convert log cpm to a matrix structure
-# All together: extract the log cpm of the top 250 genes and store that in a matrix
-mat = as.matrix(assay(se_immunedef,"log_counts_cpm"))[rownames(results(dds)[order(results(dds)$padj),])[1:250],] # Using first 500 genes to simplify
+# All together: extract the log cpm of the top 1000 genes and store that in a matrix
+mat = as.matrix(assay(se_immunedef,
+                      "log_counts_cpm"))[rownames(results(dds)[order(results(dds)$padj),])[1:1000],] 
+# Using first 500 genes to simplify
 
 # normalize data row-wise
 mat = t(scale(t(mat)))
@@ -192,8 +194,8 @@ topTable(fit, coef=ncol(design))
 # display top 1000 most significant genes
 datatable(topTable(fit, coef=ncol(design), number=1000))
 
-# store the name of the top 250 most significant genes
-limma250 <- rownames(topTable(fit, coef=ncol(design), number=250))
+# store the name of the top 1000 most significant genes
+limma1000 <- rownames(topTable(fit, coef=ncol(design), number=1000))
 ```
 
 #### Heatmap of DEGs (limma)
@@ -238,7 +240,7 @@ length(path_names) # pathway count
 get_genes<- function(pname, sets){sets %>% filter(gs_name==pname) %>% pull(gene_symbol)}
 
 # create a list of pathways as keys and vector of belonging genes as values
-C7_pathlist <- sapply(path_names, get_genes, sets)
+C7_pathlist <- sapply(path_names, get_genes, sets) #3rd arg updated
 
 # save list
 saveRDS(C7_pathlist, file="mSigDB_C7.rds")
@@ -273,7 +275,7 @@ design<-model.matrix(~group)
 # fit empirical bayes regression model
 #relationship
 #use usual limma pipelines
-fit<-lmFit(gsvaRes,design)
+fit<-lmFit(gsvaRes, design)
 fit<-eBayes(fit)
 
 # organize data by top ranked pathways when predicting IDC (coef = col#2 = IDC)
@@ -286,12 +288,13 @@ datatable(topTable(fit, coef=ncol(design), number=1000))
 #### Heatmap of DEGs (limma)
 
 ```{r}
-# rownames(topTable(fit, coef=ncol(design), number=250)) # get the name of the top 250 most significant pathways
+# rownames(topTable(fit, coef=ncol(design), number=1000)) # get the name of the top 1000 most significant pathways
 # as.matrix(gsvaRes) # convert enrichment scores to a matrix structure
-# All together: extract the enrichment scores of the top 250 pathways and store that in a matrix
+# All together: extract the enrichment scores of the top 1000 pathways and store that in a matrix
 
 # Make a Heatmap of DEGs
-mat = as.matrix(gsvaRes)[rownames(topTable(fit, coef=ncol(design), number=250)),] # Using first 500 genes to simplify
+mat = as.matrix(gsvaRes)[rownames(topTable(fit, coef=ncol(design), number=1000)),] 
+# Using first 500 genes to simplify
 
 # normalize data row-wise
 mat = t(scale(t(mat)))
@@ -311,7 +314,7 @@ Heatmap(mat,show_row_names=F,show_column_names = F, top_annotation = ha)
  
 ```{r}
 # based on the results of DESeq, cross-reference the gene with pathway databases to infer which pathways are the most significant
-a <- enrichr(deseq250, dbs)
+a <- enrichr(deseq1000, dbs)
 
 # next code-chunks: display the results of each database cross-referencing
 ```
@@ -341,7 +344,7 @@ datatable(enriched$Reactome_2016)
  
 ```{r}
 # based on the results of limma, cross-reference the gene with pathway databases to infer which pathways are the most significant
-enriched <- enrichr(limma250, dbs)
+enriched <- enrichr(limma1000, dbs)
 
 # next code-chunks: display the results of each database cross-referencing
 ```
@@ -370,18 +373,18 @@ datatable(enriched$Reactome_2016)
 ```{r}
 #combine result lists into dataframe
 
-results_1_df <- data.frame(deseq250 = deseq250,
-                           limma250 = limma250) 
+results_1_df <- data.frame(deseq1000 = deseq1000,
+                           limma1000 = limma1000) 
 
 # obtain project directory
 project_root <- rprojroot::find_root(has_dir("Meta-omic-Analysis-Capstone"))
 # obtain comparison analysis directory
-relative_path <- file.path("Meta-omic-Analysis-Capstone/Deliverable 3")
+relative_path <- file.path("Meta-omic-Analysis-Capstone/Deliverable 4")
 # file's output path
 output_path <- fs::path(project_root,
                          relative_path, "data",
-                         "NasalCVID_results_top250.csv")
-# write .csv file into Deliverable 3 folder
+                         "NasalCVID_results_top1000.csv")
+# write .csv file into Deliverable 4 folder
 write_csv(x=results_1_df, file=output_path)
 
 ```
