@@ -313,7 +313,7 @@ deseq1000 <- rownames(res)[1:1000]
 # All together: extract the log cpm of the top 1000 genes and store that in a matrix
 # # get the name of the genes ordered by adjusted p-val
 
- top_genes = rownames(results(dds)[order(results(dds)$padj),])[1:1000]
+top_genes = rownames(results(dds)[order(results(dds)$padj),])[1:1000]
 # top_genes <- deseq1000 ...this didn't work either... although essentially same
 
 # # convert log cpm to a matrix structure sorted by the top genes
