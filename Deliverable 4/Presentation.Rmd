@@ -130,6 +130,9 @@ se_immunedef <- mkAssay(se_immunedef, log = TRUE, counts_to_CPM = TRUE)
 assays(se_immunedef)
 ```
 
+
+# Nasal VS Control
+
 ## Visualization and Dimension reduction
 
 ```{r nasal_umap, include=FALSE}
@@ -151,7 +154,7 @@ g1 <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=Condition)) +
   ggtitle("Nasal Samples")
 ```
 
-```{r PBMC_umap, include=FALSE}
+```{r ctrl_umap, include=FALSE}
 # fit UMAP model to log cpm data
 # note: transpose data to make it tidy
 set.seed(1)
@@ -236,7 +239,7 @@ HM1 <- Heatmap(mat,
 
 ```
 
-```{r PBMC_deseq, include=FALSE}
+```{r ctrl_deseq, include=FALSE}
 # format data into a DESeq2-friendly Data Structure
 counts <- assay(se_cvid_ctrl, "counts")
 meta_data <- colData(se_cvid_ctrl)
@@ -257,12 +260,12 @@ res <- results(dds)[order(results(dds)[,6]),]
 #res[1:10,]
 
 # store the name of the top 1000 most significant genes, per Dr. Johnson
-PBMC_deseq <- data.frame(res)
-PBMC_deseq1000 <- rownames(res)[1:1000]
+ctrl_deseq <- data.frame(res)
+ctrl_deseq1000 <- rownames(res)[1:1000]
 ```
 
 
-```{r PBMC_deseq_HA, include=FALSE}
+```{r ctrl_deseq_HA, include=FALSE}
 # Make a Heatmap of DEGs
 
 # All together: extract the log cpm of the top 1000 genes and store that in a matrix
@@ -292,42 +295,366 @@ HM2 <- Heatmap(mat,
 
 ```
 
-```{r Deseq_Heatmaps}
-g1 <- grid.grabExpr(draw(HM1,
+```{r deseq_Heatmaps}
+h1 <- grid.grabExpr(draw(HM1,
                          heatmap_legend_side = "bottom",
                          annotation_legend_side = "bottom"))
 
-g2 <- grid.grabExpr(draw(HM2,
+h2 <- grid.grabExpr(draw(HM2,
                          heatmap_legend_side = "bottom",
                          annotation_legend_side = "bottom"))
 
 # Arrange them separately
-grid.arrange(g1, g2, ncol = 2)
+grid.arrange(h1, h2, ncol = 2)
 ```
 
-## Common DEGs (DeSeq)
+## Combined DEGs (DeSeq)
+```{r combined_results}
+common_genes <- intersect(row.names(nasal_deseq), row.names(ctrl_deseq))
+
+combined_results <- data.frame(gene = common_genes) %>%
+    mutate(
+        nasal_padj = nasal_deseq[common_genes,]$padj,
+        ctrl_padj = ctrl_deseq[common_genes,]$padj,
+        combined_chisq = -2*(log(nasal_padj) + log(ctrl_padj)),
+        nasal_effect = nasal_deseq[common_genes,]$log2FoldChange,
+        ctrl_effect = ctrl_deseq[common_genes,]$log2FoldChange,
+    ) %>% 
+    transmute(
+        gene = gene,
+        combined_p = 1 - pchisq(combined_chisq, 4),
+        nasal_effect = ifelse(nasal_effect > 0, "Upregulated", "Downregulated"),
+        ctrl_effect = ifelse(ctrl_effect > 0, "Upregulated", "Downregulated"),
+        reg_agreement = ifelse(ctrl_effect == nasal_effect, "Same", "Opposite"),
+    ) %>% 
+    mutate(across(where(is.character), as.factor))%>% 
+    filter(!is.na(combined_p)) %>%
+    arrange(combined_p) %>% 
+    slice_head(n = 250)
+
+row.names(combined_results) <- combined_results$gene
+combined_results$gene <- NULL
+
+datatable(combined_results)
+```
+
+## Pathway Analysis - Any {.tabset}
+```{r include = FALSE}
+# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
+
+genes <- row.names(combined_results)
+enriched <- enrichr(genes, dbs)
+```
+
+### DESeq2 WikiPathways
+
 ```{r}
-common_degs <- intersect(nasal_deseq1000, PBMC_deseq1000)
-
-significances <- data.frame(nasal_padj = nasal_deseq[common_degs,]$padj,
-                            PBMC_padj = PBMC_deseq[common_degs,]$padj)
-
-row.names(significances) <- common_degs
-
-
-rank_scores = log(significances$nasal_padj) + log(significances$PBMC_padj)
-datatable(significances[ order(rank_scores), ])
-
-#ggplot(log(significances), aes(x=nasal_padj, y=PBMC_padj)) +
-#    geom_point(size=1.5)
+datatable(enriched$WikiPathways_2016)
 ```
 
-## a
+### DESeq2 KEGG
+
 ```{r}
-print(common_degs)
+datatable(enriched$KEGG_2016)
+```
+
+### DESeq2 Panther
+
+```{r}
+datatable(enriched$Panther_2016)
+```
+
+### DESeq2 Reactome
+
+```{r}
+datatable(enriched$Reactome_2016)
+```
+
+## Pathway Analysis - Same {.tabset}
+```{r include=FALSE}
+# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
+
+genes <- row.names(filter(combined_results, reg_agreement == "Same"))
+enriched <- enrichr(genes, dbs)
+```
+
+### DESeq2 WikiPathways
+
+```{r}
+datatable(enriched$WikiPathways_2016)
+```
+
+### DESeq2 KEGG
+
+```{r}
+datatable(enriched$KEGG_2016)
+```
+
+### DESeq2 Panther
+
+```{r}
+datatable(enriched$Panther_2016)
+```
+
+### DESeq2 Reactome
+
+```{r}
+datatable(enriched$Reactome_2016)
+```
+
+## Pathway Analysis - Opposite {.tabset}
+```{r include=FALSE}
+# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
+
+genes <- row.names(filter(combined_results, reg_agreement == "Opposite"))
+enriched <- enrichr(genes, dbs)
+```
+### DESeq2 WikiPathways
+
+```{r}
+datatable(enriched$WikiPathways_2016)
+```
+
+### DESeq2 KEGG
+
+```{r}
+datatable(enriched$KEGG_2016)
+```
+
+### DESeq2 Panther
+
+```{r}
+datatable(enriched$Panther_2016)
+```
+
+### DESeq2 Reactome
+
+```{r}
+datatable(enriched$Reactome_2016)
 ```
 
 
+# Nasal VS LPS
+
+## Visualization and Dimension reduction
+
+```{r lps_umap, include=FALSE}
+# fit UMAP model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+umap.defaults$n_neighbors=5
+umap_out <- umap(t(assay(se_cvid_LPS,"log_counts_cpm")), config=umap.defaults)
+
+# define dataframe with UMAP dimensions and IDC
+umap_plot <- as.data.frame(umap_out$layout) # X, Y, ...
+umap_plot$Condition <- as.factor(se_cvid_ctrl$Condition) # color / group
+
+# plot UMAP1 and UMAP2 by IDC
+g3 <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=Condition)) +
+  geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
+  geom_text(label=colnames(se_cvid_ctrl), nudge_y = 0.1,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("PBMC - Stimulated Samples")
+```
+
+```{r UMAPS_2, echo=FALSE}
+combined_plot <- g1 + g3 + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+
+plot(combined_plot)
+```
+
+## DEGs (Deseq) Heat Maps
+
+```{r lps_deseq, include=FALSE}
+# format data into a DESeq2-friendly Data Structure
+counts <- assay(se_cvid_LPS, "counts")
+meta_data <- colData(se_cvid_LPS)
+Condition <- meta_data$Condition
+
+dds <- DESeqDataSetFromMatrix(countData=counts, colData=meta_data, design=~Condition)
+#colData is a data frame of demographic/phenotypic data
+
+# filter for genes with significant expression  
+# expression should be > 0, but > 100 should be better
+dds<-dds[rowSums(counts(dds))>1,] #Gene Filtering
+
+# fit negative binomial regression
+dds<-DESeq(dds) #Performs estimation of size factors, dispersion, and negative binomial GLM f#itting
+
+# extracting results, ordering them by adjusted p-value
+res <- results(dds)[order(results(dds)[,6]),]
+#res[1:10,]
+
+# store the name of the top 1000 most significant genes, per Dr. Johnson
+lps_deseq <- data.frame(res)
+lps_deseq1000 <- rownames(res)[1:1000]
+```
 
 
+```{r lps_deseq_HA, include=FALSE}
+# Make a Heatmap of DEGs
 
+# All together: extract the log cpm of the top 1000 genes and store that in a matrix
+# # get the name of the genes ordered by adjusted p-val
+top_genes <- rownames(results(dds)[order(results(dds)$padj),])[1:250]
+# # convert log cpm to a matrix structure sorted by the top genes
+mat <- as.matrix(assay(se_cvid_LPS,"log_counts_cpm"))[top_genes,] 
+
+# normalize data row-wise
+mat <- t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df <- data.frame(Condition=colData(se_cvid_LPS)$Condition) 
+
+# create HeatMap with some annotations
+ha <- HeatmapAnnotation(df=df, col=list(Condition=c("Healthy"="Blue","Deficient"="Red")))
+HM3 <- Heatmap(mat,
+               name = "Log CPM",
+               show_row_names=F,
+               show_column_names=F,
+               row_dend_side = "right",
+               top_annotation=ha,
+               column_title = "PBMC - Stimulated Samples",
+               heatmap_legend_param = list(direction = "horizontal", 
+                                           title_gp = gpar(fontsize = 8), 
+                                           labels_gp = gpar(fontsize = 8)))
+
+```
+
+```{r deseq_Heatmaps_2}
+h1 <- grid.grabExpr(draw(HM1,
+                         heatmap_legend_side = "bottom",
+                         annotation_legend_side = "bottom"))
+
+h3 <- grid.grabExpr(draw(HM3,
+                         heatmap_legend_side = "bottom",
+                         annotation_legend_side = "bottom"))
+
+# Arrange them separately
+grid.arrange(h1, h3, ncol = 2)
+```
+
+## Combined DEGs (DeSeq)
+```{r combined_results_2}
+common_genes <- intersect(row.names(nasal_deseq), row.names(lps_deseq))
+
+combined_results <- data.frame(gene = common_genes) %>%
+    mutate(
+        nasal_padj = nasal_deseq[common_genes,]$padj,
+        lps_padj = lps_deseq[common_genes,]$padj,
+        combined_chisq = -2*(log(nasal_padj) + log(lps_padj)),
+        nasal_effect = nasal_deseq[common_genes,]$log2FoldChange,
+        lps_effect = lps_deseq[common_genes,]$log2FoldChange,
+    ) %>% 
+    transmute(
+        gene = gene,
+        combined_p = 1 - pchisq(combined_chisq, 4),
+        nasal_effect = ifelse(nasal_effect > 0, "Upregulated", "Downregulated"),
+        lps_effect = ifelse(lps_effect > 0, "Upregulated", "Downregulated"),
+        reg_agreement = ifelse(lps_effect == nasal_effect, "Same", "Opposite"),
+    ) %>% 
+    mutate(across(where(is.character), as.factor))%>% 
+    filter(!is.na(combined_p)) %>%
+    arrange(combined_p) %>% 
+    slice_head(n = 250)
+
+row.names(combined_results) <- combined_results$gene
+combined_results$gene <- NULL
+
+datatable(combined_results)
+```
+
+## Pathway Analysis - Any {.tabset}
+```{r include = FALSE}
+# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
+
+genes <- row.names(combined_results)
+enriched <- enrichr(genes, dbs)
+```
+
+### DESeq2 WikiPathways
+
+```{r}
+datatable(enriched$WikiPathways_2016)
+```
+
+### DESeq2 KEGG
+
+```{r}
+datatable(enriched$KEGG_2016)
+```
+
+### DESeq2 Panther
+
+```{r}
+datatable(enriched$Panther_2016)
+```
+
+### DESeq2 Reactome
+
+```{r}
+datatable(enriched$Reactome_2016)
+```
+
+## Pathway Analysis - Same {.tabset}
+```{r include=FALSE}
+# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
+
+genes <- row.names(filter(combined_results, reg_agreement == "Same"))
+enriched <- enrichr(genes, dbs)
+```
+
+### DESeq2 WikiPathways
+
+```{r}
+datatable(enriched$WikiPathways_2016)
+```
+
+### DESeq2 KEGG
+
+```{r}
+datatable(enriched$KEGG_2016)
+```
+
+### DESeq2 Panther
+
+```{r}
+datatable(enriched$Panther_2016)
+```
+
+### DESeq2 Reactome
+
+```{r}
+datatable(enriched$Reactome_2016)
+```
+
+## Pathway Analysis - Opposite {.tabset}
+```{r include=FALSE}
+# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
+
+genes <- row.names(filter(combined_results, reg_agreement == "Opposite"))
+enriched <- enrichr(genes, dbs)
+```
+### DESeq2 WikiPathways
+
+```{r}
+datatable(enriched$WikiPathways_2016)
+```
+
+### DESeq2 KEGG
+
+```{r}
+datatable(enriched$KEGG_2016)
+```
+
+### DESeq2 Panther
+
+```{r}
+datatable(enriched$Panther_2016)
+```
+
+### DESeq2 Reactome
+
+```{r}
+datatable(enriched$Reactome_2016)
+```

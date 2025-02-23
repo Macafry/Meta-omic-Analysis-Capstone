@@ -314,7 +314,7 @@ Heatmap(mat,show_row_names=F,show_column_names = F, top_annotation = ha)
  
 ```{r}
 # based on the results of DESeq, cross-reference the gene with pathway databases to infer which pathways are the most significant
-a <- enrichr(deseq1000, dbs)
+enriched <- enrichr(deseq1000, dbs)
 
 # next code-chunks: display the results of each database cross-referencing
 ```
