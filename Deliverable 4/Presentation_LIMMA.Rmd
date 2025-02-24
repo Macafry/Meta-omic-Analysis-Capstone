@@ -1,0 +1,499 @@
+---
+title: "Presentation_LIMMA"
+author: "W. Evan Johnson, Ph.D., Ian Mc Farlane, Bram Stults"
+date: "`r Sys.Date()`"
+output: slidy_presentation
+header-includes:
+   - \usepackage{amsmath}
+editor_options: 
+  chunk_output_type: console
+tables: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(readr)
+library(Rsubread)
+library(Rsamtools)
+library(SummarizedExperiment)
+library(edgeR)
+library(DESeq2)
+library(ComplexHeatmap)
+library(TBSignatureProfiler)
+library(umap)
+library(tidyverse)
+library(DT)
+library(GSVA)
+library(enrichR)
+library(biomaRt)
+library(rprojroot)
+library(fs)
+library(dplyr)
+library(patchwork)
+library(gridExtra)
+library(ComplexHeatmap)
+
+# define pathway libraries
+dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
+
+```
+
+```{r read_in_blood, include=FALSE}
+# read RNA expression counts and patient data
+load(file="data/readMatrix_PBMC_BulkRNAseq_CVID.Rdata")
+
+mt.counts.df <- read.csv("data/translated_genes.txt", row.names = 1)
+groups <- sample.info$disease 
+
+subs = c(UCVID = "Deficient",
+         CVID = "Deficient",
+         healthy = "Healthy",
+         NCVID = "remove")
+
+
+groups <- unname(subs[match(groups, names(subs))])
+
+# store index of NCVID subjects
+remove_NCVID_index <- which(groups == "remove")
+
+# update group label vector
+groups <- groups[groups != "remove"] 
+groups <- factor(groups)
+
+
+#updating dataframes
+mt.counts.df <- mt.counts.df[,-remove_NCVID_index]
+sample.info <- sample.info[-remove_NCVID_index,]
+sample.info$Condition <- groups
+
+#  re-store results
+counts <- mt.counts.df
+meta_data <- sample.info
+
+# isolate group indicator variable
+group <- meta_data$disease
+
+# aggregate patient and expression data into a single object
+se_cvid <- SummarizedExperiment(assays=list(counts=counts),
+                     colData = meta_data)
+
+
+# isolating treatment group experiments
+treatments <- meta_data$treatment
+ctrl_index <- which(treatments == "ctrl")
+LPS_index <- which(treatments == "LPS")
+
+counts_ctrl <- counts[,-LPS_index]
+counts_LPS <- counts[,-ctrl_index]
+
+meta_data_ctrl <- meta_data[-LPS_index,]
+meta_data_LPS <- meta_data[-ctrl_index,]
+
+se_cvid_ctrl <- SummarizedExperiment(assays=list(counts=counts_ctrl),
+                     colData = meta_data_ctrl)
+se_cvid_LPS <- SummarizedExperiment(assays=list(counts=counts_LPS),
+                     colData = meta_data_LPS)
+
+# create counts per million, log counts and log counts per million features
+# and save them into new assays
+se_cvid <- mkAssay(se_cvid, log = TRUE, counts_to_CPM = TRUE)
+# same for control only
+se_cvid_ctrl <- mkAssay(se_cvid_ctrl, log = TRUE, counts_to_CPM = TRUE)
+# same for LPS treatment group only
+se_cvid_LPS <- mkAssay(se_cvid_LPS, log = TRUE, counts_to_CPM = TRUE)
+```
+
+```{r read_in_nasal, include=FALSE}
+
+# read RNA expression counts
+counts <- read.table("data/features_combined.txt", sep="\t", 
+                     header=T, row.names=1)
+# read patient data
+meta_data <- read.table("data/meta_data.txt", sep="\t", 
+                     header=T, row.names=1)
+
+# isolate group indicator variable
+group <- meta_data$Condition
+group <- ifelse(group == "Control", "Healthy", "Deficient")
+meta_data$Condition <- group
+
+# aggregate patient and expression data into a single object
+se_immunedef <- SummarizedExperiment(assays=list(counts=counts),
+                     colData = meta_data)
+
+# create counts per million, log counts and log counts per million features 
+# and save them into new assays.
+se_immunedef <- mkAssay(se_immunedef, log = TRUE, counts_to_CPM = TRUE)
+
+# display all assays
+assays(se_immunedef)
+```
+
+
+# Nasal VS Control
+
+## Visualization and Dimension reduction
+
+```{r nasal_umap, include=FALSE}
+# fit UMAP model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+umap.defaults$n_neighbors=5
+umap_out <- umap(t(assay(se_immunedef,"log_counts_cpm")), config = umap.defaults)
+
+# define dataframe with UMAP dimensions and IDC
+umap_plot <- as.data.frame(umap_out$layout) # X, Y, ...
+umap_plot$Condition <- as.factor(se_immunedef$Condition) # color / group
+
+# plot UMAP1 and UMAP2 by IDC
+g1 <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=Condition)) +
+  geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
+  geom_text(label=colnames(se_immunedef), nudge_y = 0.1,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("Nasal Samples")
+```
+
+```{r ctrl_umap, include=FALSE}
+# fit UMAP model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+umap.defaults$n_neighbors=5
+umap_out <- umap(t(assay(se_cvid_ctrl,"log_counts_cpm")), config=umap.defaults)
+
+# define dataframe with UMAP dimensions and IDC
+umap_plot <- as.data.frame(umap_out$layout) # X, Y, ...
+umap_plot$Condition <- as.factor(se_cvid_ctrl$Condition) # color / group
+
+# plot UMAP1 and UMAP2 by IDC
+g2 <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=Condition)) +
+  geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
+  geom_text(label=colnames(se_cvid_ctrl), nudge_y = 0.1,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("PBMC - Control Samples")
+```
+
+```{r UMAPS, echo=FALSE}
+combined_plot <- g1 + g2 + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+
+plot(combined_plot)
+```
+
+
+## DEGs (LIMMA) Heat Maps
+
+```{r nasal_limma, include=FALSE}
+# Store data in Limma-friendly Data Structure
+counts <- assay(se_immunedef, "counts")
+meta_data <- colData(se_immunedef)
+group <- meta_data$Condition
+
+dge <- DGEList(counts=counts, group=group) #From edgeR, Computes library size
+
+# filter for genes with significant expression
+counts<-counts[which(rowSums(cpm(counts))>1),] #Gene Filtering #(mask)
+dge <- DGEList(counts=counts, group=group) #Re-compute library size #(filter)
+
+# Trimmed-Mean Normalization of data
+dge <- calcNormFactors(dge) #TMM normalization
+
+# Create design matrix (intercept + indicator variable)
+design<-model.matrix(~group)
+
+# distribution normalizing transformation
+v<-voom(dge, design) #voom transform to calculate weights to eliminate mean-variance #relationship
+#use usual limma pipelines
+
+# fit empirical bayes regression model
+fit<-lmFit(v,design)
+fit<-eBayes(fit)
+
+# store the name of the top 1000 most significant genes
+nasal_limma <- topTable(fit, coef=ncol(design), number=100000)
+nasal_limma1000 <- rownames(nasal_limma)[1:1000]
+```
+
+```{r nasal_limma_HA}
+# Make a Heatmap of DEGs
+
+# rownames(topTable(fit, coef=ncol(design), number=50)) # get the name of the top 50 most significant genes
+# as.matrix(assay(se_immunedef,"log_counts_cpm")) # convert log cpm to a matrix structure
+# All together: extract the log cpm of the top 50 genes and store that in a matrix
+top_genes <- rownames(topTable(fit, coef=2, number=250))
+mat <- as.matrix(assay(se_immunedef,"log_counts_cpm"))[top_genes,] # Using first 500 genes to simplify
+
+# normalize data row-wise
+mat <- t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df <- data.frame(Condition=colData(se_immunedef)$Condition) 
+
+# create HeatMap with some annotations
+ha <- HeatmapAnnotation(df=df, 
+                        col=list(Condition=c("Deficient"="Red","Healthy"="Blue")),
+                        annotation_name_side = "left")
+HM1 <- Heatmap(mat,
+               name = "Log CPM",
+               show_row_names = F,
+               show_column_names = F,
+               row_dend_side = "left",
+               top_annotation = ha,
+               column_title = "Nasal Samples",
+               heatmap_legend_param = list(direction = "horizontal", 
+                                           title_gp = gpar(fontsize = 8), 
+                                           labels_gp = gpar(fontsize = 8)))
+```
+
+```{r ctrl_limma, include=FALSE}
+# format data into a DESeq2-friendly Data Structure
+counts <- assay(se_cvid_ctrl, "counts")
+meta_data <- colData(se_cvid_ctrl)
+group <- meta_data$Condition
+
+dge <- DGEList(counts=counts, group=group) #From edgeR, Computes library size
+
+# filter for genes with significant expression
+counts<-counts[which(rowSums(cpm(counts))>1),] #Gene Filtering #(mask)
+dge <- DGEList(counts=counts, group=group) #Re-compute library size #(filter)
+
+# Trimmed-Mean Normalization of data
+dge <- calcNormFactors(dge) #TMM normalization
+
+# Create design matrix (intercept + indicator variable)
+
+design<-model.matrix(~group)
+
+# distribution normalizing transformation
+v<-voom(dge, design) #voom transform to calculate weights to eliminate mean-variance #relationship
+#use usual limma pipelines
+
+# fit empirical bayes regression model
+fit<-lmFit(v,design)
+fit<-eBayes(fit)
+
+# store the name of the top 1000 most significant genes
+ctrl_limma <- topTable(fit, coef=ncol(design), number=100000)
+ctrl_limma1000 <- rownames(nasal_limma)[1:1000]
+```
+
+```{r ctrl_limma_HA, include=FALSE}
+# Make a Heatmap of DEGs
+
+# All together: extract the log cpm of the top 1000 genes and store that in a matrix
+# # get the name of the genes ordered by adjusted p-val
+top_genes <- rownames(topTable(fit, coef=2, number=250))
+# convert log cpm to a matrix structure
+mat <- as.matrix(assay(se_cvid_ctrl,"log_counts_cpm"))[top_genes,] 
+
+# normalize data row-wise
+mat <- t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df <- data.frame(Condition=colData(se_cvid_ctrl)$Condition) 
+
+# create HeatMap with some annotations
+ha <- HeatmapAnnotation(df=df, col=list(Condition=c("Healthy"="Blue","Deficient"="Red")))
+HM2 <- Heatmap(mat,
+               name = "Log CPM",
+               show_row_names=F,
+               show_column_names=F,
+               row_dend_side = "right",
+               top_annotation=ha,
+               column_title = "PBMC - Control Samples",
+               heatmap_legend_param = list(direction = "horizontal", 
+                                           title_gp = gpar(fontsize = 8), 
+                                           labels_gp = gpar(fontsize = 8)))
+
+```
+
+```{r deseq_Heatmaps}
+h1 <- grid.grabExpr(draw(HM1,
+                         heatmap_legend_side = "bottom",
+                         annotation_legend_side = "bottom"))
+
+h2 <- grid.grabExpr(draw(HM2,
+                         heatmap_legend_side = "bottom",
+                         annotation_legend_side = "bottom"))
+
+# Arrange them separately
+grid.arrange(h1, h2, ncol = 2)
+```
+
+## Combined DEGs (DeSeq)
+```{r combined_results}
+common_genes <- intersect(row.names(nasal_limma), row.names(ctrl_limma))
+significance_threshold <- 0.2
+
+combined_results <- data.frame(gene = common_genes) %>%
+    mutate(
+        nasal_p = nasal_limma[common_genes,]$P.Val,
+        ctrl_p = ctrl_limma[common_genes,]$P.Val,
+        combined_chisq = -2*(log(nasal_p) + log(ctrl_p)),
+        nasal_effect = nasal_limma[common_genes,]$logFC,
+        ctrl_effect = ctrl_limma[common_genes,]$logFC,
+    ) %>% 
+    transmute(
+        gene = gene, nasal_p = nasal_p, ctrl_p = ctrl_p,
+        combined_p = 1 - pchisq(combined_chisq, 4),
+        nasal_effect = ifelse(nasal_effect > 0, "Upregulated", "Downregulated"),
+        ctrl_effect = ifelse(ctrl_effect > 0, "Upregulated", "Downregulated"),
+        reg_agreement = ifelse(ctrl_effect == nasal_effect, "Same", "Opposite"),
+    ) %>% 
+    mutate(across(where(is.character), as.factor))%>% 
+    filter(
+        !is.na(combined_p),
+        nasal_p < significance_threshold,
+        ctrl_p < significance_threshold,
+    ) %>%
+    arrange(combined_p) %>% 
+    slice_head(n = 250)
+
+row.names(combined_results) <- combined_results$gene
+combined_results$gene <- NULL
+combined_results$nasal_p <- NULL
+combined_results$ctrl_p <- NULL
+
+
+datatable(combined_results)
+```
+
+# Nasal VS Stimulated
+## Visualization and Dimension reduction
+
+```{r lps_umap, include=FALSE}
+# fit UMAP model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+umap.defaults$n_neighbors=5
+umap_out <- umap(t(assay(se_cvid_LPS,"log_counts_cpm")), config=umap.defaults)
+
+# define dataframe with UMAP dimensions and IDC
+umap_plot <- as.data.frame(umap_out$layout) # X, Y, ...
+umap_plot$Condition <- as.factor(se_cvid_ctrl$Condition) # color / group
+
+# plot UMAP1 and UMAP2 by IDC
+g3 <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=Condition)) +
+  geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
+  geom_text(label=colnames(se_cvid_ctrl), nudge_y = 0.1,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("PBMC - Stimulated Samples")
+```
+
+```{r UMAPS_2, echo=FALSE}
+combined_plot <- g1 + g3 + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+
+plot(combined_plot)
+```
+
+## DEGs (LIMMA) Heat Maps
+
+```{r lps_limma, include=FALSE}
+# format data into a DESeq2-friendly Data Structure
+counts <- assay(se_cvid_LPS, "counts")
+meta_data <- colData(se_cvid_LPS)
+group <- meta_data$Condition
+
+dge <- DGEList(counts=counts, group=group) #From edgeR, Computes library size
+
+# filter for genes with significant expression
+counts<-counts[which(rowSums(cpm(counts))>1),] #Gene Filtering #(mask)
+dge <- DGEList(counts=counts, group=group) #Re-compute library size #(filter)
+
+# Trimmed-Mean Normalization of data
+dge <- calcNormFactors(dge) #TMM normalization
+
+# Create design matrix (intercept + indicator variable)
+
+design<-model.matrix(~group)
+
+# distribution normalizing transformation
+v<-voom(dge, design) #voom transform to calculate weights to eliminate mean-variance #relationship
+#use usual limma pipelines
+
+# fit empirical bayes regression model
+fit<-lmFit(v,design)
+fit<-eBayes(fit)
+
+# store the name of the top 1000 most significant genes, per Dr. Johnson
+lps_limma <- topTable(fit, coef=ncol(design), number=100000)
+lps_limma1000 <- rownames(nasal_limma)[1:1000]
+```
+
+```{r lps_limma_HA, include=FALSE}
+# Make a Heatmap of DEGs
+
+# All together: extract the log cpm of the top 1000 genes and store that in a matrix
+# # get the name of the genes ordered by adjusted p-val
+top_genes <- rownames(topTable(fit, coef=2, number=250))
+# convert log cpm to a matrix structure
+mat <- as.matrix(assay(se_cvid_LPS,"log_counts_cpm"))[top_genes,] 
+
+# normalize data row-wise
+mat <- t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df <- data.frame(Condition=colData(se_cvid_LPS)$Condition) 
+
+# create HeatMap with some annotations
+ha <- HeatmapAnnotation(df=df, col=list(Condition=c("Healthy"="Blue","Deficient"="Red")))
+HM3 <- Heatmap(mat,
+               name = "Log CPM",
+               show_row_names=F,
+               show_column_names=F,
+               row_dend_side = "right",
+               top_annotation=ha,
+               column_title = "PBMC - Stimulated Samples",
+               heatmap_legend_param = list(direction = "horizontal", 
+                                           title_gp = gpar(fontsize = 8), 
+                                           labels_gp = gpar(fontsize = 8)))
+
+```
+
+```{r deseq_Heatmaps_2}
+h1 <- grid.grabExpr(draw(HM1,
+                         heatmap_legend_side = "bottom",
+                         annotation_legend_side = "bottom"))
+
+h3 <- grid.grabExpr(draw(HM3,
+                         heatmap_legend_side = "bottom",
+                         annotation_legend_side = "bottom"))
+
+# Arrange them separately
+grid.arrange(h1, h3, ncol = 2)
+```
+
+## Combined DEGs (DeSeq)
+```{r combined_results_2}
+common_genes <- intersect(row.names(nasal_limma), row.names(lps_limma))
+
+combined_results <- data.frame(gene = common_genes) %>%
+    mutate(
+        nasal_p = nasal_limma[common_genes,]$P.Val,
+        lps_p = lps_limma[common_genes,]$P.Val,
+        combined_chisq = -2*(log(nasal_p) + log(lps_p)),
+        nasal_effect = nasal_limma[common_genes,]$logFC,
+        lps_effect = lps_limma[common_genes,]$logFC,
+    ) %>% 
+    transmute(
+        gene = gene, nasal_p = nasal_p, lps_p = lps_p,
+        combined_p = 1 - pchisq(combined_chisq, 4),
+        nasal_effect = ifelse(nasal_effect > 0, "Upregulated", "Downregulated"),
+        lps_effect = ifelse(lps_effect > 0, "Upregulated", "Downregulated"),
+        reg_agreement = ifelse(lps_effect == nasal_effect, "Same", "Opposite"),
+    ) %>% 
+    mutate(across(where(is.character), as.factor))%>% 
+    filter(
+        !is.na(combined_p),
+        nasal_p < significance_threshold,
+        lps_p < significance_threshold,
+    ) %>%
+    arrange(combined_p) %>% 
+    slice_head(n = 250)
+
+row.names(combined_results) <- combined_results$gene
+combined_results$gene <- NULL
+combined_results$nasal_p <- NULL
+combined_results$lps_p <- NULL
+
+datatable(combined_results)
+```

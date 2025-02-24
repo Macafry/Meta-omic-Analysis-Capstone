@@ -622,7 +622,7 @@ g2 <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=Condition)) +
   ggtitle("PBMC - Control Samples")
 ```
 
-```{r UMAPS, echo=FALSE}
+```{r UMAPS}
 combined_plot <- g1 + g2 + plot_layout(guides = "collect") & theme(legend.position = "bottom")
 
 plot(combined_plot)
@@ -760,6 +760,7 @@ grid.arrange(h1, h2, ncol = 2)
 ## Combined DEGs (DeSeq)
 ```{r combined_results}
 common_genes <- intersect(row.names(nasal_deseq), row.names(ctrl_deseq))
+significance_threshold <- 0.2
 
 combined_results <- data.frame(gene = common_genes) %>%
     mutate(
@@ -770,120 +771,69 @@ combined_results <- data.frame(gene = common_genes) %>%
         ctrl_effect = ctrl_deseq[common_genes,]$log2FoldChange,
     ) %>% 
     transmute(
-        gene = gene,
+        gene = gene, nasal_padj = nasal_padj, ctrl_padj = ctrl_padj,
         combined_p = 1 - pchisq(combined_chisq, 4),
         nasal_effect = ifelse(nasal_effect > 0, "Upregulated", "Downregulated"),
         ctrl_effect = ifelse(ctrl_effect > 0, "Upregulated", "Downregulated"),
         reg_agreement = ifelse(ctrl_effect == nasal_effect, "Same", "Opposite"),
     ) %>% 
     mutate(across(where(is.character), as.factor))%>% 
-    filter(!is.na(combined_p)) %>%
+    filter(
+        !is.na(combined_p),
+        nasal_padj < significance_threshold,
+        ctrl_padj < significance_threshold,
+    ) %>%
     arrange(combined_p) %>% 
     slice_head(n = 250)
 
 row.names(combined_results) <- combined_results$gene
 combined_results$gene <- NULL
+combined_results$nasal_padj <- NULL
+combined_results$ctrl_padj <- NULL
+
 
 datatable(combined_results)
 ```
 
-## Pathway Analysis - Any {.tabset}
-```{r include = FALSE}
+## Pathway Analysis - Any Direction
+```{r}
 # based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
 
-genes <- row.names(combined_results)
-enriched <- enrichr(genes, dbs)
+showPathways <- function(gene_names) {
+    invisible(capture.output(
+      enriched <- enrichr(gene_names, dbs)
+    ))
+    
+    combined_df <- bind_rows(
+          enriched$WikiPathways_2016 %>% mutate(database = "WikiPathways"),
+          enriched$KEGG_2016 %>% mutate(database = "KEGG"),
+          enriched$Panther_2016 %>% mutate(database = "Panther"),
+          enriched$Reactome_2016 %>% mutate(database = "Reactome")
+        ) %>%
+        arrange(Adjusted.P.value)
+    
+    combined_df$Adjusted.P.value <- NULL
+    combined_df$Old.Adjusted.P.value <- NULL
+    
+    # Display the combined data frame
+    datatable(combined_df)
+}
+
+showPathways(row.names(combined_results))
 ```
 
-### DESeq2 WikiPathways
-
+## Pathway Analysis - Same Direction
 ```{r}
-datatable(enriched$WikiPathways_2016)
+showPathways(row.names(filter(combined_results, reg_agreement == "Same")))
 ```
 
-### DESeq2 KEGG
-
+## Pathway Analysis - Opposite Directions
 ```{r}
-datatable(enriched$KEGG_2016)
-```
-
-### DESeq2 Panther
-
-```{r}
-datatable(enriched$Panther_2016)
-```
-
-### DESeq2 Reactome
-
-```{r}
-datatable(enriched$Reactome_2016)
-```
-
-## Pathway Analysis - Same {.tabset}
-```{r include=FALSE}
-# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
-
-genes <- row.names(filter(combined_results, reg_agreement == "Same"))
-enriched <- enrichr(genes, dbs)
-```
-
-### DESeq2 WikiPathways
-
-```{r}
-datatable(enriched$WikiPathways_2016)
-```
-
-### DESeq2 KEGG
-
-```{r}
-datatable(enriched$KEGG_2016)
-```
-
-### DESeq2 Panther
-
-```{r}
-datatable(enriched$Panther_2016)
-```
-
-### DESeq2 Reactome
-
-```{r}
-datatable(enriched$Reactome_2016)
-```
-
-## Pathway Analysis - Opposite {.tabset}
-```{r include=FALSE}
-# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
-
-genes <- row.names(filter(combined_results, reg_agreement == "Opposite"))
-enriched <- enrichr(genes, dbs)
-```
-### DESeq2 WikiPathways
-
-```{r}
-datatable(enriched$WikiPathways_2016)
-```
-
-### DESeq2 KEGG
-
-```{r}
-datatable(enriched$KEGG_2016)
-```
-
-### DESeq2 Panther
-
-```{r}
-datatable(enriched$Panther_2016)
-```
-
-### DESeq2 Reactome
-
-```{r}
-datatable(enriched$Reactome_2016)
+showPathways(row.names(filter(combined_results, reg_agreement == "Opposite")))
 ```
 
 
-# Nasal VS LPS
+# Nasal VS Stimulated
 
 ## Visualization and Dimension reduction
 
@@ -996,114 +946,40 @@ combined_results <- data.frame(gene = common_genes) %>%
         lps_effect = lps_deseq[common_genes,]$log2FoldChange,
     ) %>% 
     transmute(
-        gene = gene,
+        gene = gene, nasal_padj = nasal_padj, lps_padj = lps_padj,
         combined_p = 1 - pchisq(combined_chisq, 4),
         nasal_effect = ifelse(nasal_effect > 0, "Upregulated", "Downregulated"),
         lps_effect = ifelse(lps_effect > 0, "Upregulated", "Downregulated"),
         reg_agreement = ifelse(lps_effect == nasal_effect, "Same", "Opposite"),
     ) %>% 
     mutate(across(where(is.character), as.factor))%>% 
-    filter(!is.na(combined_p)) %>%
+    filter(
+        !is.na(combined_p),
+        nasal_padj < significance_threshold,
+        lps_padj < significance_threshold,
+    ) %>%
     arrange(combined_p) %>% 
     slice_head(n = 250)
 
 row.names(combined_results) <- combined_results$gene
 combined_results$gene <- NULL
+combined_results$nasal_padj <- NULL
+combined_results$lps_padj <- NULL
 
 datatable(combined_results)
 ```
 
-## Pathway Analysis - Any {.tabset}
-```{r include = FALSE}
-# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
-
-genes <- row.names(combined_results)
-enriched <- enrichr(genes, dbs)
-```
-
-### DESeq2 WikiPathways
-
+## Pathway Analysis - Any Direction
 ```{r}
-datatable(enriched$WikiPathways_2016)
+showPathways(row.names(combined_results))
 ```
 
-### DESeq2 KEGG
-
+## Pathway Analysis - Same Direction
 ```{r}
-datatable(enriched$KEGG_2016)
+showPathways(row.names(filter(combined_results, reg_agreement == "Same")))
 ```
 
-### DESeq2 Panther
-
+## Pathway Analysis - Opposite Directions
 ```{r}
-datatable(enriched$Panther_2016)
-```
-
-### DESeq2 Reactome
-
-```{r}
-datatable(enriched$Reactome_2016)
-```
-
-## Pathway Analysis - Same {.tabset}
-```{r include=FALSE}
-# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
-
-genes <- row.names(filter(combined_results, reg_agreement == "Same"))
-enriched <- enrichr(genes, dbs)
-```
-
-### DESeq2 WikiPathways
-
-```{r}
-datatable(enriched$WikiPathways_2016)
-```
-
-### DESeq2 KEGG
-
-```{r}
-datatable(enriched$KEGG_2016)
-```
-
-### DESeq2 Panther
-
-```{r}
-datatable(enriched$Panther_2016)
-```
-
-### DESeq2 Reactome
-
-```{r}
-datatable(enriched$Reactome_2016)
-```
-
-## Pathway Analysis - Opposite {.tabset}
-```{r include=FALSE}
-# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
-
-genes <- row.names(filter(combined_results, reg_agreement == "Opposite"))
-enriched <- enrichr(genes, dbs)
-```
-### DESeq2 WikiPathways
-
-```{r}
-datatable(enriched$WikiPathways_2016)
-```
-
-### DESeq2 KEGG
-
-```{r}
-datatable(enriched$KEGG_2016)
-```
-
-### DESeq2 Panther
-
-```{r}
-datatable(enriched$Panther_2016)
-```
-
-### DESeq2 Reactome
-
-```{r}
-datatable(enriched$Reactome_2016)
+showPathways(row.names(filter(combined_results, reg_agreement == "Opposite")))
 ```
