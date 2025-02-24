@@ -52,7 +52,7 @@ subs = c(UCVID = "Deficient",
          NCVID = "remove")
 
 
-groups <- unname(subs[match(groups, names(subs))])
+groups <- unname( subs[match(groups, names(subs))] )
 
 # store index of NCVID subjects
 remove_NCVID_index <- which(groups == "remove")
@@ -129,6 +129,455 @@ se_immunedef <- mkAssay(se_immunedef, log = TRUE, counts_to_CPM = TRUE)
 # display all assays
 assays(se_immunedef)
 ```
+
+# Nasopharyngeal Sample Analysis
+
+## Visualization and Dimension Reduction
+
+```{r nasal_umap_0, include = F}
+# fit UMAP model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+umap.defaults$n_neighbors=5
+umap_out <- umap(t(assay(se_immunedef,"log_counts_cpm")), config = umap.defaults)
+
+# define dataframe with UMAP dimensions and IDC
+umap_plot <- as.data.frame(umap_out$layout) # X, Y, ...
+umap_plot$Condition <- as.factor(se_immunedef$Condition) # color / group
+
+# plot UMAP1 and UMAP2 by IDC
+g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=Condition)) +
+  geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
+  geom_text(label=colnames(se_immunedef), nudge_y = 0.1,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("UMAP Plot")
+
+```
+
+```{r nasal_umap_plot_0, echo = F}
+#g <- g + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+
+plot(g)
+```
+
+* Immunodeficient samples clustered higher along UMAP axes
+* Sample 2 intermixed with healthy samples; a subtype? outlier?
+
+## Nasopharynx - DEGs (Deseq) Heat Maps
+
+```{r nasal_deseq_0, include=FALSE}
+# format data into a DESeq2-friendly Data Structure
+counts <- assay(se_immunedef, "counts")
+meta_data <- colData(se_immunedef)
+Condition <- meta_data$Condition
+
+dds <- DESeqDataSetFromMatrix(countData = counts, colData=meta_data, design=~Condition)
+#colData is a data frame of demographic/phenotypic data
+
+# filter for genes with significant expression  
+# expression should be > 0, but > 100 should be better
+dds<-dds[rowSums(counts(dds))>1,] #Gene Filtering
+
+# fit negative binomial regression
+dds<-DESeq(dds) #Performs estimation of size factors,dispersion, and negative binomial GLM f#itting
+
+# extracting results, ordering them by adjusted p-value
+res <- results(dds)[order(results(dds)[,6]),]
+
+# store the name of the top 1000 most significant genes, per Dr. Johnson
+nasal_deseq <- data.frame(res)
+nasal_deseq1000 <- rownames(res)[1:1000]
+```
+
+```{r nasal_deseq_HA_0, include=FALSE}
+# Make a Heatmap of DEGs
+
+# All together: extract the log cpm of the top 250 genes and store that in a matrix
+# # get the name of the genes ordered by adjusted p-val
+top_genes <- rownames(results(dds)[order(results(dds)$padj),])[1:250]
+# # convert log cpm to a matrix structure sorted by the top genes
+mat <- as.matrix(assay(se_immunedef, "log_counts_cpm"))[top_genes,] 
+# Using first 500 genes to simplify
+
+# normalize data row-wise
+mat <- t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df <- data.frame(Condition=colData(se_immunedef)$Condition) 
+
+# create HeatMap with some annotations
+ha <- HeatmapAnnotation(df=df, 
+                        col=list(Condition=c("Deficient"="Red","Healthy"="Blue")),
+                        annotation_name_side = "left")
+HM1 <- Heatmap(mat,
+               name = "Log CPM",
+               show_row_names = F,
+               show_column_names = F,
+               row_dend_side = "left",
+               top_annotation = ha,
+               column_title = "Nasopharyngeal Samples",
+               heatmap_legend_param = list(direction = "horizontal", 
+                                           title_gp = gpar(fontsize = 8), 
+                                           labels_gp = gpar(fontsize = 8)))
+
+```
+
+```{r deseq_Heatmaps_0}
+draw(HM1, heatmap_legend_side = "bottom", annotation_legend_side = "bottom")
+
+```
+
+*Noting the pattern of gene expression by sampled groups
+
+## Nasopharynx DEGs (DeSeq)
+```{r nasal_results}
+#top 1000 list used, pared to 250
+
+nasal_results <- data.frame(gene = nasal_deseq1000) %>%
+    mutate(
+        nasal_padj = nasal_deseq[nasal_deseq1000,]$padj,
+        nasal_effect = nasal_deseq[nasal_deseq1000,]$log2FoldChange
+    ) %>% 
+    mutate(
+        nasal_effect = ifelse(nasal_effect > 0, "Upregulated", "Downregulated")
+    ) %>% 
+    mutate(across(where(is.character), as.factor)) %>% 
+    arrange(nasal_padj) %>% 
+    slice_head(n = 250)
+
+row.names(nasal_results) <- nasal_results$gene
+nasal_results$gene <- NULL
+
+datatable(nasal_results)
+```
+
+## Pathway Analysis - Nasopharynx {.tabset}
+```{r include = FALSE}
+# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
+
+enriched <- enrichr(nasal_deseq1000, dbs)
+
+```
+
+
+### DESeq2 WikiPathways
+```{r}
+datatable(enriched$WikiPathways_2016)
+```
+
+### DESeq2 KEGG
+```{r}
+datatable(enriched$KEGG_2016)
+```
+
+### DESeq2 Panther
+```{r}
+datatable(enriched$Panther_2016)
+```
+
+### DESeq2 Reactome
+```{r}
+datatable(enriched$Reactome_2016)
+```
+
+
+# PBMC Sample Analysis (paired samples)
+
+## Visualization and Dimension Reduction Control Group
+
+```{r ctrl_umap_0, include=FALSE}
+# fit UMAP model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+umap.defaults$n_neighbors=5
+umap_out <- umap(t(assay(se_cvid_ctrl,"log_counts_cpm")), config=umap.defaults)
+
+# define dataframe with UMAP dimensions and IDC
+umap_plot <- as.data.frame(umap_out$layout) # X, Y, ...
+umap_plot$Condition <- as.factor(se_cvid_ctrl$Condition) # color / group
+
+# plot UMAP1 and UMAP2 by IDC
+g1 <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=Condition)) +
+  geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
+  geom_text(label=colnames(se_cvid_ctrl), nudge_y = 0.1,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("PBMC - Control Samples")
+```
+
+```{r ctrl_umap_plot_0, echo=FALSE}
+#g1 <- g1 + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+
+plot(g1)
+```
+
+*Healthy Samples 1, 3 and 5 appear clustered with immunodeficient samples 
+
+## PBMC Control Group - DEGs (Deseq) Heat Maps
+
+```{r ctrl_deseq_0, include=FALSE}
+# format data into a DESeq2-friendly Data Structure
+counts <- assay(se_cvid_ctrl, "counts")
+meta_data <- colData(se_cvid_ctrl)
+Condition <- meta_data$Condition
+
+dds <- DESeqDataSetFromMatrix(countData=counts, colData=meta_data, design=~Condition)
+#colData is a data frame of demographic/phenotypic data
+
+# filter for genes with significant expression  
+# expression should be > 0, but > 100 should be better
+dds<-dds[rowSums(counts(dds))>1,] #Gene Filtering
+
+# fit negative binomial regression
+dds<-DESeq(dds) #Performs estimation of size factors, dispersion, and negative binomial GLM f#itting
+
+# extracting results, ordering them by adjusted p-value
+res <- results(dds)[order(results(dds)[,6]),]
+#res[1:10,]
+
+# store the name of the top 1000 most significant genes, per Dr. Johnson
+ctrl_deseq <- data.frame(res)
+ctrl_deseq1000 <- rownames(res)[1:1000]
+```
+
+
+```{r ctrl_deseq_HA_0, include=FALSE}
+# Make a Heatmap of DEGs
+
+# All together: extract the log cpm of the top 1000 genes and store that in a matrix
+# # get the name of the genes ordered by adjusted p-val
+top_genes <- rownames(results(dds)[order(results(dds)$padj),])[1:250]
+# # convert log cpm to a matrix structure sorted by the top genes
+mat <- as.matrix(assay(se_cvid_ctrl,"log_counts_cpm"))[top_genes,] 
+
+# normalize data row-wise
+mat <- t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df <- data.frame(Condition=colData(se_cvid_ctrl)$Condition) 
+
+# create HeatMap with some annotations
+ha <- HeatmapAnnotation(df=df, col=list(Condition=c("Healthy"="Blue","Deficient"="Red")))
+HM2 <- Heatmap(mat,
+               name = "Log CPM",
+               show_row_names=F,
+               show_column_names=F,
+               row_dend_side = "right",
+               top_annotation=ha,
+               column_title = "PBMC - Control Samples",
+               heatmap_legend_param = list(direction = "horizontal", 
+                                           title_gp = gpar(fontsize = 8), 
+                                           labels_gp = gpar(fontsize = 8)))
+
+```
+
+```{r deseq_Heatmaps_ctrl_1}
+
+draw(HM2, heatmap_legend_side = "bottom", annotation_legend_side = "bottom")
+
+```
+
+* Noting pattern of upregulated genes for healthy samples and inverse pattern for immunodeficient samples
+
+## PBMC Control Group DEGs (DeSeq)
+```{r pbmc_control_results}
+#top 1000 list used, pared to 250
+
+ctrl_results <- data.frame(gene = ctrl_deseq1000) %>%
+    mutate(
+        ctrl_padj = nasal_deseq[ctrl_deseq1000,]$padj,
+        ctrl_effect = nasal_deseq[ctrl_deseq1000,]$log2FoldChange
+    ) %>% 
+    mutate(
+        ctrl_effect = ifelse(ctrl_effect > 0, "Upregulated", "Downregulated")
+    ) %>% 
+    mutate(across(where(is.character), as.factor)) %>% 
+    arrange(ctrl_padj) %>% 
+    slice_head(n = 250)
+
+row.names(ctrl_results) <- ctrl_results$gene
+ctrl_results$gene <- NULL
+
+datatable(nasal_results)
+```
+
+## Pathway Analysis - Control Group {.tabset}
+```{r include = FALSE}
+# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
+
+enriched <- enrichr(ctrl_deseq1000, dbs)
+
+```
+
+### DESeq2 WikiPathways
+```{r}
+datatable(enriched$WikiPathways_2016)
+```
+
+### DESeq2 KEGG
+```{r}
+datatable(enriched$KEGG_2016)
+```
+
+### DESeq2 Panther
+```{r}
+datatable(enriched$Panther_2016)
+```
+
+### DESeq2 Reactome
+```{r}
+datatable(enriched$Reactome_2016)
+```
+
+
+## Visualization and Dimension Reduction LPS-stimulated Group 
+
+```{r lps_umap_0, include=FALSE}
+# fit UMAP model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+umap.defaults$n_neighbors=5
+umap_out <- umap(t(assay(se_cvid_LPS,"log_counts_cpm")), config=umap.defaults)
+
+# define dataframe with UMAP dimensions and IDC
+umap_plot <- as.data.frame(umap_out$layout) # X, Y, ...
+umap_plot$Condition <- as.factor(se_cvid_ctrl$Condition) # color / group
+
+# plot UMAP1 and UMAP2 by IDC
+g3 <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=Condition)) +
+  geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
+  geom_text(label=colnames(se_cvid_ctrl), nudge_y = 0.1,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("PBMC - Stimulated Samples")
+```
+
+```{r lps_umap_plot_0, echo=FALSE}
+#g3 <- g3 + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+
+plot(g3)
+```
+
+*Under LPS stimulation, healthy Sample 43 appears to cluster with immunodeficient samples, whereas Samples 1, 3 and 5 now clustered in healthy group.
+
+
+## DEGs (Deseq) Heat Maps
+
+```{r lps_deseq_0, include=FALSE}
+# format data into a DESeq2-friendly Data Structure
+counts <- assay(se_cvid_LPS, "counts")
+meta_data <- colData(se_cvid_LPS)
+Condition <- meta_data$Condition
+
+dds <- DESeqDataSetFromMatrix(countData=counts, colData=meta_data, design=~Condition)
+#colData is a data frame of demographic/phenotypic data
+
+# filter for genes with significant expression  
+# expression should be > 0, but > 100 should be better
+dds<-dds[rowSums(counts(dds))>1,] #Gene Filtering
+
+# fit negative binomial regression
+dds<-DESeq(dds) #Performs estimation of size factors, dispersion, and negative binomial GLM f#itting
+
+# extracting results, ordering them by adjusted p-value
+res <- results(dds)[order(results(dds)[,6]),]
+#res[1:10,]
+
+# store the name of the top 1000 most significant genes, per Dr. Johnson
+lps_deseq <- data.frame(res)
+lps_deseq1000 <- rownames(res)[1:1000]
+```
+
+
+```{r lps_deseq_HA_0, include=FALSE}
+# Make a Heatmap of DEGs
+
+# All together: extract the log cpm of the top 1000 genes and store that in a matrix
+# # get the name of the genes ordered by adjusted p-val
+top_genes <- rownames(results(dds)[order(results(dds)$padj),])[1:250]
+# # convert log cpm to a matrix structure sorted by the top genes
+mat <- as.matrix(assay(se_cvid_LPS,"log_counts_cpm"))[top_genes,] 
+
+# normalize data row-wise
+mat <- t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df <- data.frame(Condition=colData(se_cvid_LPS)$Condition) 
+
+# create HeatMap with some annotations
+ha <- HeatmapAnnotation(df=df, col=list(Condition=c("Healthy"="Blue","Deficient"="Red")))
+HM3 <- Heatmap(mat,
+               name = "Log CPM",
+               show_row_names=F,
+               show_column_names=F,
+               row_dend_side = "right",
+               top_annotation=ha,
+               column_title = "PBMC - Stimulated Samples",
+               heatmap_legend_param = list(direction = "horizontal", 
+                                           title_gp = gpar(fontsize = 8), 
+                                           labels_gp = gpar(fontsize = 8)))
+
+```
+
+```{r deseq_Heatmaps_lps_2}
+
+draw(HM3,heatmap_legend_side = "bottom", annotation_legend_side = "bottom")
+
+```
+*Noting redistribution pattern of upregulation versus downregulation under LPS stimulation
+
+## PBMC LPS stimulated Group DEGs (DeSeq)
+```{r pbmc_lps_results}
+#top 1000 list used, pared to 250
+
+lps_results <- data.frame(gene = lps_deseq1000) %>%
+    mutate(
+        lps_padj = lps_deseq[lps_deseq1000,]$padj,
+        lps_effect = lps_deseq[lps_deseq1000,]$log2FoldChange
+    ) %>% 
+    mutate(
+        lps_effect = ifelse(lps_effect > 0, "Upregulated", "Downregulated")
+    ) %>% 
+    mutate(across(where(is.character), as.factor)) %>% 
+    arrange(lps_padj) %>% 
+    slice_head(n = 250)
+
+row.names(lps_results) <- lps_results$gene
+lps_results$gene <- NULL
+
+datatable(lps_results)
+```
+
+## Pathway Analysis - LPS stimulated Group {.tabset}
+```{r include = FALSE}
+# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
+
+enriched <- enrichr(lps_deseq1000, dbs)
+
+```
+
+
+### DESeq2 WikiPathways
+```{r}
+datatable(enriched$WikiPathways_2016)
+```
+
+### DESeq2 KEGG
+```{r}
+datatable(enriched$KEGG_2016)
+```
+
+### DESeq2 Panther
+```{r}
+datatable(enriched$Panther_2016)
+```
+
+### DESeq2 Reactome
+```{r}
+datatable(enriched$Reactome_2016)
+```
+
+
+
+-----
 
 
 # Nasal VS Control
