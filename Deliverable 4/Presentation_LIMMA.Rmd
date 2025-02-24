@@ -1,5 +1,5 @@
 ---
-title: "Presentation"
+title: "Presentation_LIMMA"
 author: "W. Evan Johnson, Ph.D., Ian Mc Farlane, Bram Stults"
 date: "`r Sys.Date()`"
 output: slidy_presentation
@@ -173,48 +173,54 @@ g2 <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=Condition)) +
   ggtitle("PBMC - Control Samples")
 ```
 
-```{r UMAPS}
+```{r UMAPS, echo=FALSE}
 combined_plot <- g1 + g2 + plot_layout(guides = "collect") & theme(legend.position = "bottom")
 
 plot(combined_plot)
 ```
 
 
-## DEGs (Deseq) Heat Maps
+## DEGs (LIMMA) Heat Maps
 
-```{r nasal_deseq, include=FALSE}
-# format data into a DESeq2-friendly Data Structure
+```{r nasal_limma, include=FALSE}
+# Store data in Limma-friendly Data Structure
 counts <- assay(se_immunedef, "counts")
 meta_data <- colData(se_immunedef)
-Condition <- meta_data$Condition
+group <- meta_data$Condition
 
-dds <- DESeqDataSetFromMatrix(countData = counts, colData=meta_data, design=~Condition)
-#colData is a data frame of demographic/phenotypic data
+dge <- DGEList(counts=counts, group=group) #From edgeR, Computes library size
 
-# filter for genes with significant expression  
-# expression should be > 0, but > 100 should be better
-dds<-dds[rowSums(counts(dds))>1,] #Gene Filtering
+# filter for genes with significant expression
+counts<-counts[which(rowSums(cpm(counts))>1),] #Gene Filtering #(mask)
+dge <- DGEList(counts=counts, group=group) #Re-compute library size #(filter)
 
-# fit negative binomial regression
-dds<-DESeq(dds) #Performs estimation of size factors,dispersion, and negative binomial GLM f#itting
+# Trimmed-Mean Normalization of data
+dge <- calcNormFactors(dge) #TMM normalization
 
-# extracting results, ordering them by adjusted p-value
-res <- results(dds)[order(results(dds)[,6]),]
+# Create design matrix (intercept + indicator variable)
+design<-model.matrix(~group)
 
-# store the name of the top 1000 most significant genes, per Dr. Johnson
-nasal_deseq <- data.frame(res)
-nasal_deseq1000 <- rownames(res)[1:1000]
+# distribution normalizing transformation
+v<-voom(dge, design) #voom transform to calculate weights to eliminate mean-variance #relationship
+#use usual limma pipelines
+
+# fit empirical bayes regression model
+fit<-lmFit(v,design)
+fit<-eBayes(fit)
+
+# store the name of the top 1000 most significant genes
+nasal_limma <- topTable(fit, coef=ncol(design), number=100000)
+nasal_limma1000 <- rownames(nasal_limma)[1:1000]
 ```
 
-```{r nasal_deseq_HA, include=FALSE}
+```{r nasal_limma_HA}
 # Make a Heatmap of DEGs
 
-# All together: extract the log cpm of the top 1000 genes and store that in a matrix
-# # get the name of the genes ordered by adjusted p-val
-top_genes <- rownames(results(dds)[order(results(dds)$padj),])[1:250]
-# # convert log cpm to a matrix structure sorted by the top genes
-mat <- as.matrix(assay(se_immunedef, "log_counts_cpm"))[top_genes,] 
-# Using first 500 genes to simplify
+# rownames(topTable(fit, coef=ncol(design), number=50)) # get the name of the top 50 most significant genes
+# as.matrix(assay(se_immunedef,"log_counts_cpm")) # convert log cpm to a matrix structure
+# All together: extract the log cpm of the top 50 genes and store that in a matrix
+top_genes <- rownames(topTable(fit, coef=2, number=250))
+mat <- as.matrix(assay(se_immunedef,"log_counts_cpm"))[top_genes,] # Using first 500 genes to simplify
 
 # normalize data row-wise
 mat <- t(scale(t(mat)))
@@ -236,42 +242,47 @@ HM1 <- Heatmap(mat,
                heatmap_legend_param = list(direction = "horizontal", 
                                            title_gp = gpar(fontsize = 8), 
                                            labels_gp = gpar(fontsize = 8)))
-
 ```
 
-```{r ctrl_deseq, include=FALSE}
+```{r ctrl_limma, include=FALSE}
 # format data into a DESeq2-friendly Data Structure
 counts <- assay(se_cvid_ctrl, "counts")
 meta_data <- colData(se_cvid_ctrl)
-Condition <- meta_data$Condition
+group <- meta_data$Condition
 
-dds <- DESeqDataSetFromMatrix(countData=counts, colData=meta_data, design=~Condition)
-#colData is a data frame of demographic/phenotypic data
+dge <- DGEList(counts=counts, group=group) #From edgeR, Computes library size
 
-# filter for genes with significant expression  
-# expression should be > 0, but > 100 should be better
-dds<-dds[rowSums(counts(dds))>1,] #Gene Filtering
+# filter for genes with significant expression
+counts<-counts[which(rowSums(cpm(counts))>1),] #Gene Filtering #(mask)
+dge <- DGEList(counts=counts, group=group) #Re-compute library size #(filter)
 
-# fit negative binomial regression
-dds<-DESeq(dds) #Performs estimation of size factors, dispersion, and negative binomial GLM f#itting
+# Trimmed-Mean Normalization of data
+dge <- calcNormFactors(dge) #TMM normalization
 
-# extracting results, ordering them by adjusted p-value
-res <- results(dds)[order(results(dds)[,6]),]
-#res[1:10,]
+# Create design matrix (intercept + indicator variable)
 
-# store the name of the top 1000 most significant genes, per Dr. Johnson
-ctrl_deseq <- data.frame(res)
-ctrl_deseq1000 <- rownames(res)[1:1000]
+design<-model.matrix(~group)
+
+# distribution normalizing transformation
+v<-voom(dge, design) #voom transform to calculate weights to eliminate mean-variance #relationship
+#use usual limma pipelines
+
+# fit empirical bayes regression model
+fit<-lmFit(v,design)
+fit<-eBayes(fit)
+
+# store the name of the top 1000 most significant genes
+ctrl_limma <- topTable(fit, coef=ncol(design), number=100000)
+ctrl_limma1000 <- rownames(nasal_limma)[1:1000]
 ```
 
-
-```{r ctrl_deseq_HA, include=FALSE}
+```{r ctrl_limma_HA, include=FALSE}
 # Make a Heatmap of DEGs
 
 # All together: extract the log cpm of the top 1000 genes and store that in a matrix
 # # get the name of the genes ordered by adjusted p-val
-top_genes <- rownames(results(dds)[order(results(dds)$padj),])[1:250]
-# # convert log cpm to a matrix structure sorted by the top genes
+top_genes <- rownames(topTable(fit, coef=2, number=250))
+# convert log cpm to a matrix structure
 mat <- as.matrix(assay(se_cvid_ctrl,"log_counts_cpm"))[top_genes,] 
 
 # normalize data row-wise
@@ -310,19 +321,19 @@ grid.arrange(h1, h2, ncol = 2)
 
 ## Combined DEGs (DeSeq)
 ```{r combined_results}
-common_genes <- intersect(row.names(nasal_deseq), row.names(ctrl_deseq))
+common_genes <- intersect(row.names(nasal_limma), row.names(ctrl_limma))
 significance_threshold <- 0.2
 
 combined_results <- data.frame(gene = common_genes) %>%
     mutate(
-        nasal_padj = nasal_deseq[common_genes,]$padj,
-        ctrl_padj = ctrl_deseq[common_genes,]$padj,
-        combined_chisq = -2*(log(nasal_padj) + log(ctrl_padj)),
-        nasal_effect = nasal_deseq[common_genes,]$log2FoldChange,
-        ctrl_effect = ctrl_deseq[common_genes,]$log2FoldChange,
+        nasal_p = nasal_limma[common_genes,]$P.Val,
+        ctrl_p = ctrl_limma[common_genes,]$P.Val,
+        combined_chisq = -2*(log(nasal_p) + log(ctrl_p)),
+        nasal_effect = nasal_limma[common_genes,]$logFC,
+        ctrl_effect = ctrl_limma[common_genes,]$logFC,
     ) %>% 
     transmute(
-        gene = gene, nasal_padj = nasal_padj, ctrl_padj = ctrl_padj,
+        gene = gene, nasal_p = nasal_p, ctrl_p = ctrl_p,
         combined_p = 1 - pchisq(combined_chisq, 4),
         nasal_effect = ifelse(nasal_effect > 0, "Upregulated", "Downregulated"),
         ctrl_effect = ifelse(ctrl_effect > 0, "Upregulated", "Downregulated"),
@@ -331,61 +342,22 @@ combined_results <- data.frame(gene = common_genes) %>%
     mutate(across(where(is.character), as.factor))%>% 
     filter(
         !is.na(combined_p),
-        nasal_padj < significance_threshold,
-        ctrl_padj < significance_threshold,
+        nasal_p < significance_threshold,
+        ctrl_p < significance_threshold,
     ) %>%
     arrange(combined_p) %>% 
     slice_head(n = 250)
 
 row.names(combined_results) <- combined_results$gene
 combined_results$gene <- NULL
-combined_results$nasal_padj <- NULL
-combined_results$ctrl_padj <- NULL
+combined_results$nasal_p <- NULL
+combined_results$ctrl_p <- NULL
 
 
 datatable(combined_results)
 ```
 
-## Pathway Analysis - Any Direction
-```{r}
-# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
-
-showPathways <- function(gene_names) {
-    invisible(capture.output(
-      enriched <- enrichr(gene_names, dbs)
-    ))
-    
-    combined_df <- bind_rows(
-          enriched$WikiPathways_2016 %>% mutate(database = "WikiPathways"),
-          enriched$KEGG_2016 %>% mutate(database = "KEGG"),
-          enriched$Panther_2016 %>% mutate(database = "Panther"),
-          enriched$Reactome_2016 %>% mutate(database = "Reactome")
-        ) %>%
-        arrange(Adjusted.P.value)
-    
-    combined_df$Adjusted.P.value <- NULL
-    combined_df$Old.Adjusted.P.value <- NULL
-    
-    # Display the combined data frame
-    datatable(combined_df)
-}
-
-showPathways(row.names(combined_results))
-```
-
-## Pathway Analysis - Same Direction
-```{r}
-showPathways(row.names(filter(combined_results, reg_agreement == "Same")))
-```
-
-## Pathway Analysis - Opposite Directions
-```{r}
-showPathways(row.names(filter(combined_results, reg_agreement == "Opposite")))
-```
-
-
 # Nasal VS Stimulated
-
 ## Visualization and Dimension reduction
 
 ```{r lps_umap, include=FALSE}
@@ -413,41 +385,47 @@ combined_plot <- g1 + g3 + plot_layout(guides = "collect") & theme(legend.positi
 plot(combined_plot)
 ```
 
-## DEGs (Deseq) Heat Maps
+## DEGs (LIMMA) Heat Maps
 
-```{r lps_deseq, include=FALSE}
+```{r lps_limma, include=FALSE}
 # format data into a DESeq2-friendly Data Structure
 counts <- assay(se_cvid_LPS, "counts")
 meta_data <- colData(se_cvid_LPS)
-Condition <- meta_data$Condition
+group <- meta_data$Condition
 
-dds <- DESeqDataSetFromMatrix(countData=counts, colData=meta_data, design=~Condition)
-#colData is a data frame of demographic/phenotypic data
+dge <- DGEList(counts=counts, group=group) #From edgeR, Computes library size
 
-# filter for genes with significant expression  
-# expression should be > 0, but > 100 should be better
-dds<-dds[rowSums(counts(dds))>1,] #Gene Filtering
+# filter for genes with significant expression
+counts<-counts[which(rowSums(cpm(counts))>1),] #Gene Filtering #(mask)
+dge <- DGEList(counts=counts, group=group) #Re-compute library size #(filter)
 
-# fit negative binomial regression
-dds<-DESeq(dds) #Performs estimation of size factors, dispersion, and negative binomial GLM f#itting
+# Trimmed-Mean Normalization of data
+dge <- calcNormFactors(dge) #TMM normalization
 
-# extracting results, ordering them by adjusted p-value
-res <- results(dds)[order(results(dds)[,6]),]
-#res[1:10,]
+# Create design matrix (intercept + indicator variable)
+
+design<-model.matrix(~group)
+
+# distribution normalizing transformation
+v<-voom(dge, design) #voom transform to calculate weights to eliminate mean-variance #relationship
+#use usual limma pipelines
+
+# fit empirical bayes regression model
+fit<-lmFit(v,design)
+fit<-eBayes(fit)
 
 # store the name of the top 1000 most significant genes, per Dr. Johnson
-lps_deseq <- data.frame(res)
-lps_deseq1000 <- rownames(res)[1:1000]
+lps_limma <- topTable(fit, coef=ncol(design), number=100000)
+lps_limma1000 <- rownames(nasal_limma)[1:1000]
 ```
 
-
-```{r lps_deseq_HA, include=FALSE}
+```{r lps_limma_HA, include=FALSE}
 # Make a Heatmap of DEGs
 
 # All together: extract the log cpm of the top 1000 genes and store that in a matrix
 # # get the name of the genes ordered by adjusted p-val
-top_genes <- rownames(results(dds)[order(results(dds)$padj),])[1:250]
-# # convert log cpm to a matrix structure sorted by the top genes
+top_genes <- rownames(topTable(fit, coef=2, number=250))
+# convert log cpm to a matrix structure
 mat <- as.matrix(assay(se_cvid_LPS,"log_counts_cpm"))[top_genes,] 
 
 # normalize data row-wise
@@ -486,18 +464,18 @@ grid.arrange(h1, h3, ncol = 2)
 
 ## Combined DEGs (DeSeq)
 ```{r combined_results_2}
-common_genes <- intersect(row.names(nasal_deseq), row.names(lps_deseq))
+common_genes <- intersect(row.names(nasal_limma), row.names(lps_limma))
 
 combined_results <- data.frame(gene = common_genes) %>%
     mutate(
-        nasal_padj = nasal_deseq[common_genes,]$padj,
-        lps_padj = lps_deseq[common_genes,]$padj,
-        combined_chisq = -2*(log(nasal_padj) + log(lps_padj)),
-        nasal_effect = nasal_deseq[common_genes,]$log2FoldChange,
-        lps_effect = lps_deseq[common_genes,]$log2FoldChange,
+        nasal_p = nasal_limma[common_genes,]$P.Val,
+        lps_p = lps_limma[common_genes,]$P.Val,
+        combined_chisq = -2*(log(nasal_p) + log(lps_p)),
+        nasal_effect = nasal_limma[common_genes,]$logFC,
+        lps_effect = lps_limma[common_genes,]$logFC,
     ) %>% 
     transmute(
-        gene = gene, nasal_padj = nasal_padj, lps_padj = lps_padj,
+        gene = gene, nasal_p = nasal_p, lps_p = lps_p,
         combined_p = 1 - pchisq(combined_chisq, 4),
         nasal_effect = ifelse(nasal_effect > 0, "Upregulated", "Downregulated"),
         lps_effect = ifelse(lps_effect > 0, "Upregulated", "Downregulated"),
@@ -506,31 +484,16 @@ combined_results <- data.frame(gene = common_genes) %>%
     mutate(across(where(is.character), as.factor))%>% 
     filter(
         !is.na(combined_p),
-        nasal_padj < significance_threshold,
-        lps_padj < significance_threshold,
+        nasal_p < significance_threshold,
+        lps_p < significance_threshold,
     ) %>%
     arrange(combined_p) %>% 
     slice_head(n = 250)
 
 row.names(combined_results) <- combined_results$gene
 combined_results$gene <- NULL
-combined_results$nasal_padj <- NULL
-combined_results$lps_padj <- NULL
+combined_results$nasal_p <- NULL
+combined_results$lps_p <- NULL
 
 datatable(combined_results)
-```
-
-## Pathway Analysis - Any Direction
-```{r}
-showPathways(row.names(combined_results))
-```
-
-## Pathway Analysis - Same Direction
-```{r}
-showPathways(row.names(filter(combined_results, reg_agreement == "Same")))
-```
-
-## Pathway Analysis - Opposite Directions
-```{r}
-showPathways(row.names(filter(combined_results, reg_agreement == "Opposite")))
 ```
