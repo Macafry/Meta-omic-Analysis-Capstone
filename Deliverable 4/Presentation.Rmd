@@ -39,6 +39,7 @@ dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
 
 ```
 
+
 ```{r read_in_blood, include=FALSE}
 # read RNA expression counts and patient data
 load(file="data/readMatrix_PBMC_BulkRNAseq_CVID.Rdata")
@@ -103,6 +104,7 @@ se_cvid_ctrl <- mkAssay(se_cvid_ctrl, log = TRUE, counts_to_CPM = TRUE)
 # same for LPS treatment group only
 se_cvid_LPS <- mkAssay(se_cvid_LPS, log = TRUE, counts_to_CPM = TRUE)
 ```
+
 
 ```{r read_in_nasal, include=FALSE}
 
@@ -384,8 +386,8 @@ draw(HM2, heatmap_legend_side = "bottom", annotation_legend_side = "bottom")
 
 ctrl_results <- data.frame(gene = ctrl_deseq1000) %>%
     mutate(
-        ctrl_padj = nasal_deseq[ctrl_deseq1000,]$padj,
-        ctrl_effect = nasal_deseq[ctrl_deseq1000,]$log2FoldChange
+        ctrl_padj = ctrl_deseq[ctrl_deseq1000,]$padj,
+        ctrl_effect = ctrl_deseq[ctrl_deseq1000,]$log2FoldChange
     ) %>% 
     mutate(
         ctrl_effect = ifelse(ctrl_effect > 0, "Upregulated", "Downregulated")
@@ -397,7 +399,7 @@ ctrl_results <- data.frame(gene = ctrl_deseq1000) %>%
 row.names(ctrl_results) <- ctrl_results$gene
 ctrl_results$gene <- NULL
 
-datatable(nasal_results)
+datatable(ctrl_results)
 ```
 
 ## Pathway Analysis - Control Group {.tabset}
