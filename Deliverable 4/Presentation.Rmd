@@ -1,6 +1,6 @@
 ---
-title: "Presentation"
-author: "W. Evan Johnson, Ph.D., Ian Mc Farlane, Bram Stults"
+title: "Integrative Analysis of\nCommon Variable Immunodeficiency (CVID)"
+author: "Ian Mc Farlane, Bram Stults, advised by W. Evan Johnson, Ph.D."
 date: "`r Sys.Date()`"
 output: slidy_presentation
 header-includes:
@@ -47,9 +47,9 @@ load(file="data/readMatrix_PBMC_BulkRNAseq_CVID.Rdata")
 mt.counts.df <- read.csv("data/translated_genes.txt", row.names = 1)
 groups <- sample.info$disease 
 
-subs = c(UCVID = "Deficient",
-         CVID = "Deficient",
-         healthy = "Healthy",
+subs = c(UCVID = "Deficient (CVID)",
+         CVID = "Deficient (CVID)",
+         healthy = "Control (Healthy)",
          NCVID = "remove")
 
 
@@ -117,7 +117,7 @@ meta_data <- read.table("data/meta_data.txt", sep="\t",
 
 # isolate group indicator variable
 group <- meta_data$Condition
-group <- ifelse(group == "Control", "Healthy", "Deficient")
+group <- ifelse(group == "Control", "Control (Healthy)", "Deficient (CVID)")
 meta_data$Condition <- group
 
 # aggregate patient and expression data into a single object
@@ -209,12 +209,12 @@ df <- data.frame(Condition=colData(se_immunedef)$Condition)
 
 # create HeatMap with some annotations
 ha <- HeatmapAnnotation(df=df, 
-                        col=list(Condition=c("Deficient"="Red","Healthy"="Blue")),
+                        col=list(Condition=c("Control (Healthy)"="Blue","Deficient (CVID)"="Red")),
                         annotation_name_side = "left")
 HM1 <- Heatmap(mat,
                name = "Log CPM",
                show_row_names = F,
-               show_column_names = F,
+               show_column_names = T,
                row_dend_side = "left",
                top_annotation = ha,
                column_title = "Nasopharyngeal Samples",
@@ -285,7 +285,7 @@ datatable(enriched$Reactome_2016)
 
 # PBMC Sample Analysis (paired samples)
 
-## Visualization and Dimension Reduction Control Group
+## Visualization and Dimension Reduction Control (Unstimulated) Group
 
 ```{r ctrl_umap_0, include=FALSE}
 # fit UMAP model to log cpm data
@@ -303,7 +303,7 @@ g1 <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=Condition)) +
   geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
   geom_text(label=colnames(se_cvid_ctrl), nudge_y = 0.1,) +
   theme(plot.title = element_text(hjust = 0.5)) +
-  ggtitle("PBMC - Control Samples")
+  ggtitle("PBMC - Control (Unstimulated) Samples")
 ```
 
 ```{r ctrl_umap_plot_0, echo=FALSE}
@@ -314,7 +314,7 @@ plot(g1)
 
 *Healthy Samples 1, 3 and 5 appear clustered with immunodeficient samples 
 
-## PBMC Control Group - DEGs (Deseq) Heat Maps
+## PBMC Control (Unstimulated) Group - DEGs (Deseq) Heat Maps
 
 ```{r ctrl_deseq_0, include=FALSE}
 # format data into a DESeq2-friendly Data Structure
@@ -358,14 +358,14 @@ mat <- t(scale(t(mat)))
 df <- data.frame(Condition=colData(se_cvid_ctrl)$Condition) 
 
 # create HeatMap with some annotations
-ha <- HeatmapAnnotation(df=df, col=list(Condition=c("Healthy"="Blue","Deficient"="Red")))
+ha <- HeatmapAnnotation(df=df, col=list(Condition=c("Control (Healthy)"="Blue","Deficient (CVID)"="Red")))
 HM2 <- Heatmap(mat,
                name = "Log CPM",
-               show_row_names=F,
-               show_column_names=F,
+               show_row_names = F,
+               show_column_names = T,
                row_dend_side = "right",
                top_annotation=ha,
-               column_title = "PBMC - Control Samples",
+               column_title = "PBMC - Control (Unstimulated) Samples",
                heatmap_legend_param = list(direction = "horizontal", 
                                            title_gp = gpar(fontsize = 8), 
                                            labels_gp = gpar(fontsize = 8)))
@@ -380,7 +380,7 @@ draw(HM2, heatmap_legend_side = "bottom", annotation_legend_side = "bottom")
 
 * Noting pattern of upregulated genes for healthy samples and inverse pattern for immunodeficient samples
 
-## PBMC Control Group DEGs (DeSeq)
+## PBMC Control (Unstimulated) Group DEGs (DeSeq)
 ```{r pbmc_control_results}
 #top 1000 list used, pared to 250
 
@@ -402,7 +402,7 @@ ctrl_results$gene <- NULL
 datatable(ctrl_results)
 ```
 
-## Pathway Analysis - Control Group {.tabset}
+## Pathway Analysis - Control (Unstimulated) Group {.tabset}
 ```{r include = FALSE}
 # based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
 
@@ -505,11 +505,11 @@ mat <- t(scale(t(mat)))
 df <- data.frame(Condition=colData(se_cvid_LPS)$Condition) 
 
 # create HeatMap with some annotations
-ha <- HeatmapAnnotation(df=df, col=list(Condition=c("Healthy"="Blue","Deficient"="Red")))
+ha <- HeatmapAnnotation(df=df, col=list(Condition=c("Control (Healthy)"="Blue","Deficient (CVID)"="Red")))
 HM3 <- Heatmap(mat,
                name = "Log CPM",
-               show_row_names=F,
-               show_column_names=F,
+               show_row_names = F,
+               show_column_names = T,
                row_dend_side = "right",
                top_annotation=ha,
                column_title = "PBMC - Stimulated Samples",
@@ -582,7 +582,7 @@ datatable(enriched$Reactome_2016)
 -----
 
 
-# Nasal VS Control
+# Nasal VS Control (Unstimulated)
 
 ## Visualization and Dimension reduction
 
@@ -621,7 +621,7 @@ g2 <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=Condition)) +
   geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
   geom_text(label=colnames(se_cvid_ctrl), nudge_y = 0.1,) +
   theme(plot.title = element_text(hjust = 0.5)) +
-  ggtitle("PBMC - Control Samples")
+  ggtitle("PBMC - Control (Unstimulated) Samples")
 ```
 
 ```{r UMAPS}
@@ -675,12 +675,12 @@ df <- data.frame(Condition=colData(se_immunedef)$Condition)
 
 # create HeatMap with some annotations
 ha <- HeatmapAnnotation(df=df, 
-                        col=list(Condition=c("Deficient"="Red","Healthy"="Blue")),
+                        col=list(Condition=c("Control (Healthy)"="Blue", "Deficient (CVID)"="Red")),
                         annotation_name_side = "left")
 HM1 <- Heatmap(mat,
                name = "Log CPM",
                show_row_names = F,
-               show_column_names = F,
+               show_column_names = T,
                row_dend_side = "left",
                top_annotation = ha,
                column_title = "Nasal Samples",
@@ -732,14 +732,14 @@ mat <- t(scale(t(mat)))
 df <- data.frame(Condition=colData(se_cvid_ctrl)$Condition) 
 
 # create HeatMap with some annotations
-ha <- HeatmapAnnotation(df=df, col=list(Condition=c("Healthy"="Blue","Deficient"="Red")))
+ha <- HeatmapAnnotation(df=df, col=list(Condition=c("Control (Healthy)"="Blue","Deficient (CVID)"="Red")))
 HM2 <- Heatmap(mat,
                name = "Log CPM",
-               show_row_names=F,
-               show_column_names=F,
+               show_row_names = F,
+               show_column_names = T,
                row_dend_side = "right",
                top_annotation=ha,
-               column_title = "PBMC - Control Samples",
+               column_title = "PBMC - Control (Unstimulated) Samples",
                heatmap_legend_param = list(direction = "horizontal", 
                                            title_gp = gpar(fontsize = 8), 
                                            labels_gp = gpar(fontsize = 8)))
@@ -908,11 +908,11 @@ mat <- t(scale(t(mat)))
 df <- data.frame(Condition=colData(se_cvid_LPS)$Condition) 
 
 # create HeatMap with some annotations
-ha <- HeatmapAnnotation(df=df, col=list(Condition=c("Healthy"="Blue","Deficient"="Red")))
+ha <- HeatmapAnnotation(df=df, col=list(Condition=c("Control (Healthy)"="Blue","Deficient (CVID)"="Red")))
 HM3 <- Heatmap(mat,
                name = "Log CPM",
-               show_row_names=F,
-               show_column_names=F,
+               show_row_names = F,
+               show_column_names = T,
                row_dend_side = "right",
                top_annotation=ha,
                column_title = "PBMC - Stimulated Samples",
