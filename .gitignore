@@ -1,4 +1,5 @@
 *.txt
+*.csv
 *.rds
 *.Rdata
 .Rhistory
