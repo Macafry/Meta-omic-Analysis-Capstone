@@ -121,7 +121,7 @@ pca_plot$disease <- as.factor(disease) # color/group
 # plot PC1 and PC2 by IDC
 g <- pca_plot %>% ggplot(aes(x=PC1, y=PC2, color=disease)) +
   geom_point(size=1.5) + xlab("PC 1") + ylab("PC 2") +
-  geom_text(label=colnames(se.blood), nudge_y = 5,) +
+  geom_text(label=meta_data$sample_id, nudge_y = 5,) +
   theme(plot.title = element_text(hjust = 0.5)) +
   ggtitle("PCA Plot - Blood Treatment")
 
@@ -144,7 +144,7 @@ umap_plot$disease <- as.factor(disease) # color / group
 # plot UMAP1 and UMAP2 by IDC
 g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=disease)) +
   geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
-  geom_text(label=colnames(se.blood), nudge_y = 0.1,) +
+  geom_text(label=meta_data$sample_id, nudge_y = 0.1,) +
   theme(plot.title = element_text(hjust = 0.5)) +
   ggtitle("UMAP Plot - Blood Treatment")
 
@@ -176,6 +176,7 @@ datatable(data.frame(res[1:1000,]))
 
 # store the name of the top 250 most significant genes
 deseq250 <- rownames(res)[1:250]
+blood.res <- data.frame(res)
 ```
 
 #### Heatmap of DEGs (DESeq2)
@@ -359,7 +360,7 @@ pca_plot$disease <- as.factor(disease) # color/group
 # plot PC1 and PC2 by IDC
 g <- pca_plot %>% ggplot(aes(x=PC1, y=PC2, color=disease)) +
   geom_point(size=1.5) + xlab("PC 1") + ylab("PC 2") +
-  geom_text(label=colnames(se.nasal), nudge_y = 5,) +
+  geom_text(label=meta_data$sample_id, nudge_y = 5,) +
   theme(plot.title = element_text(hjust = 0.5)) +
   ggtitle("PCA Plot - Nasal Treatment")
 
@@ -382,7 +383,7 @@ umap_plot$disease <- as.factor(se.nasal$disease) # color / group
 # plot UMAP1 and UMAP2 by IDC
 g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=disease)) +
   geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
-  geom_text(label=colnames(se.nasal), nudge_y = 0.1,) +
+  geom_text(label=meta_data$sample_id, nudge_y = 0.1,) +
   theme(plot.title = element_text(hjust = 0.5)) +
   ggtitle("UMAP Plot - Nasal Treatment")
 
@@ -414,6 +415,7 @@ datatable(data.frame(res[1:1000,]))
 
 # store the name of the top 250 most significant genes
 deseq250 <- rownames(res)[1:250]
+nasal.res <- data.frame(res)
 ```
 
 #### Heatmap of DEGs (DESeq2)
@@ -569,26 +571,85 @@ nasal.limma <- limma250
 
 ```
 
-<!--
-### Creating CSV for Comparative Analysis
-```{r include = FALSE, eval = FALSE, echo = FALSE}
-#combine result lists into dataframe
 
-results_2_df <- data.frame(ctrl_deseq=ctrl_deseq,
-                           ctrl_limma=ctrl_limma,
-                           LPS_deseq=LPS_deseq,
-                           LPS_limma=LPS_limma) 
+# Comparative analysis
 
-# obtain project directory
-project_root <- rprojroot::find_root(has_dir("Meta-omic-Analysis-Capstone"))
-# obtain comparison analysis directory
-relative_path <- file.path("Meta-omic-Analysis-Capstone/Deliverable 5")
-# file's output path
-output_path <- fs::path(project_root,
-                         relative_path, "data",
-                         "PBMC_results_top250.csv")
-# write .csv file into Deliverable 3 folder
-write_csv(x=results_2_df, file=output_path)
+## Overview
+### Common Significant genes
 
+```{r}
+(common_deseq <- intersect(blood.deseq, nasal.deseq))
+(common_limma <- intersect(blood.limma, nasal.limma))
 ```
--->
+
+### Similarity Coefficients for Limma, DESeq analyses
+
+```{r}
+print("DESeq similarity coefficient")
+length(common_deseq) / length(union(blood.deseq, nasal.deseq))
+
+print("LIMMA similarity coefficient")
+length(common_limma) / length(union(blood.limma, nasal.limma))
+```
+
+
+## Combined DEGs (DeSeq)
+```{r}
+common_genes <- common_deseq
+significance_threshold <- 0.3
+
+combined_results <- data.frame(gene = common_genes) %>%
+    mutate(
+        blood.padj = blood.res[common_genes,]$padj,
+        nasal.padj = nasal.res[common_genes,]$padj,
+        combined_chisq = -2*(log(blood.padj) + log(nasal.padj)),
+        blood.effect = blood.res[common_genes,]$log2FoldChange,
+        nasal.effect = nasal.res[common_genes,]$log2FoldChange,
+    ) %>% 
+    transmute(
+        gene = gene, blood.padj = blood.padj, nasal.padj = nasal.padj,
+        combined_p = 1 - pchisq(combined_chisq, 4),
+        blood.effect = ifelse(blood.effect > 0, "Upregulated", "Downregulated"),
+        nasal.effect = ifelse(nasal.effect > 0, "Upregulated", "Downregulated"),
+        reg_agreement = ifelse(blood.effect == nasal.effect, "Same", "Opposite"),
+    ) %>% 
+    mutate(across(where(is.character), as.factor))%>% 
+    filter(
+        !is.na(combined_p),
+        blood.padj < significance_threshold,
+        nasal.padj < significance_threshold,
+    ) %>%
+    arrange(combined_p) %>% 
+    slice_head(n = 250)
+
+row.names(combined_results) <- combined_results$gene
+combined_results$gene <- NULL
+combined_results$nasal_padj <- NULL
+combined_results$ctrl_padj <- NULL
+
+
+datatable(combined_results)
+```
+
+
+## Patways
+```{r}
+
+enriched <- enrichr(rownames(combined_results), dbs)
+
+
+combined_df <- bind_rows(
+      enriched$WikiPathways_2016 %>% mutate(database = "WikiPathways"),
+      enriched$KEGG_2016 %>% mutate(database = "KEGG"),
+      enriched$Panther_2016 %>% mutate(database = "Panther"),
+      enriched$Reactome_2016 %>% mutate(database = "Reactome")
+    ) %>%
+    arrange(Adjusted.P.value)
+
+combined_df$Adjusted.P.value <- NULL
+combined_df$Old.Adjusted.P.value <- NULL
+
+# Display the combined data frame
+datatable(combined_df)
+```
+
