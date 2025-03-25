@@ -44,13 +44,13 @@ dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
 
 ```{r}
 # read in and format patient data for both blood and nasal samples
-meta_data <- read.csv("full_metadata.csv", row.names = 1)
+meta_data <- read.csv("data/full_metadata.csv", row.names = 1)
 meta_data$sample_name_rnacounts_file <- toupper(meta_data$sample_name_rnacounts_file)
 meta_data$disease <- meta_data$status
 
 # read expression counts
-blood.counts.df <- read.csv("bloodcounts.csv", row.names = 1)
-nasal.counts.df <- read.csv("nasalcounts.csv", row.names = 1)
+blood.counts.df <- read.csv("data/bloodcounts.csv", row.names = 1)
+nasal.counts.df <- read.csv("data/nasalcounts.csv", row.names = 1)
 
 # filter patient data without a match on expression count dataframes
 relevant.rows <- meta_data$sample_name_rnacounts_file %in% c(names(blood.counts.df), names(nasal.counts.df)) 
@@ -409,7 +409,7 @@ dds<-DESeq(dds) #Performs estimation of size factors, dispersion, and negative b
 res <- results(dds)[order(results(dds)[,6]),]
 #res[1:10,]
 
-# dislpay results for the top 1000 most significant genes
+# display results for the top 1000 most significant genes
 datatable(data.frame(res[1:1000,]))
 
 # store the name of the top 250 most significant genes
@@ -569,15 +569,15 @@ nasal.limma <- limma250
 
 ```
 
-<!--
+
 ### Creating CSV for Comparative Analysis
 ```{r include = FALSE, eval = FALSE, echo = FALSE}
 #combine result lists into dataframe
 
-results_2_df <- data.frame(ctrl_deseq=ctrl_deseq,
-                           ctrl_limma=ctrl_limma,
-                           LPS_deseq=LPS_deseq,
-                           LPS_limma=LPS_limma) 
+tb_results_df <- data.frame(blood.deseq=blood.deseq,
+                           blood.limma=blood.limma,
+                           nasal.deseq=nasal.deseq,
+                           nasal.limma=nasal.limma) 
 
 # obtain project directory
 project_root <- rprojroot::find_root(has_dir("Meta-omic-Analysis-Capstone"))
@@ -586,9 +586,8 @@ relative_path <- file.path("Meta-omic-Analysis-Capstone/Deliverable 5")
 # file's output path
 output_path <- fs::path(project_root,
                          relative_path, "data",
-                         "PBMC_results_top250.csv")
-# write .csv file into Deliverable 3 folder
-write_csv(x=results_2_df, file=output_path)
+                         "TB_results_top250.csv")
+# write .csv file into Deliverable 5 folder
+write_csv(x=tb_results_df, file=output_path)
 
 ```
--->
