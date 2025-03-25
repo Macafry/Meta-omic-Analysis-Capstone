@@ -18,7 +18,51 @@ tables: true
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-library(readr)
+library(Rsubread)
+library(Rsamtools)
+library(SummarizedExperiment)
+library(edgeR)
+library(DESeq2)
+library(ComplexHeatmap)
+library(TBSignatureProfiler)
+library(umap)
+library(tidyverse)
+library(DT)
+library(GSVA)
+library(enrichR)
+library(biomaRt)
+library(rprojroot)
+library(fs)
+library(dplyr)
+
+# define pathway libraries
+dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
+
+showPathways <- function(gene_names) {
+    
+    if (length(gene_names) < 10) {
+        print(paste(length(gene_names), "genes are not enough"))
+        return()
+    }
+    
+    invisible(capture.output(
+      enriched <- enrichr(gene_names, dbs)
+    ))
+    
+    combined_df <- bind_rows(
+          enriched$WikiPathways_2016 %>% mutate(database = "WikiPathways"),
+          enriched$KEGG_2016 %>% mutate(database = "KEGG"),
+          enriched$Panther_2016 %>% mutate(database = "Panther"),
+          enriched$Reactome_2016 %>% mutate(database = "Reactome")
+        ) %>%
+        arrange(Adjusted.P.value)
+    
+    combined_df$Adjusted.P.value <- NULL
+    combined_df$Old.Adjusted.P.value <- NULL
+    
+    # Display the combined data frame
+    datatable(combined_df)
+}
 
 ```
 
@@ -55,32 +99,32 @@ blood.limma <- results_3_df$blood.limma
 ### Common Significant genes
 
 ```{r}
-(common_deseq <- intersect(LPS_deseq, ctrl_deseq))
-(common_limma <- intersect(LPS_limma, ctrl_limma))
+(common.deseq <- intersect(LPS.deseq, ctrl.deseq))
+(common.limma <- intersect(LPS.limma, ctrl.limma))
 ```
 
 ### Significant genes for LPS group only
 
 ```{r}
-setdiff(LPS_deseq, common_deseq)
-setdiff(LPS_limma, common_limma)
+setdiff(LPS.deseq, common.deseq)
+setdiff(LPS.limma, common.limma)
 ```
 
 ### Significant genes for Control group only
 
 ```{r}
-setdiff(ctrl_deseq, common_deseq)
-setdiff(ctrl_limma, common_limma)
+setdiff(ctrl.deseq, common.deseq)
+setdiff(ctrl.limma, common.limma)
 ```
 
 ### Similarity Coefficients for Limma, DESeq analyses
 
 ```{r}
 print("DESeq similarity coefficient")
-length(common_deseq) / length(union(LPS_deseq, ctrl_deseq))
+length(common.deseq) / length(union(LPS.deseq, ctrl.deseq))
 
 print("LIMMA similarity coefficient")
-length(common_limma) / length(union(LPS_limma, ctrl_limma))
+length(common.limma) / length(union(LPS.limma, ctrl.limma))
 ```
 
 ## Nasopharynx and Healthy Control PBMC {.tabset}
@@ -89,23 +133,23 @@ length(common_limma) / length(union(LPS_limma, ctrl_limma))
 
 ```{r}
 
-(common_deseq <- intersect(nasal_deseq, ctrl_deseq)) 
-(common_limma <- intersect(nasal_limma, ctrl_limma))
+(common.deseq <- intersect(nasal.deseq, ctrl.deseq)) 
+(common.limma <- intersect(nasal.limma, ctrl.limma))
 
 ```
 
 ### Significant genes for nasal mucusal samples only
 
 ```{r}
-setdiff(nasal_deseq, common_deseq)
-setdiff(nasal_limma, common_limma)
+setdiff(nasal.deseq, common.deseq)
+setdiff(nasal.limma, common.limma)
 ```
 
 ### Significant genes for Control group only
 
 ```{r}
-setdiff(ctrl_deseq, common_deseq)
-setdiff(ctrl_limma, common_limma)
+setdiff(ctrl.deseq, common.deseq)
+setdiff(ctrl.limma, common.limma)
 ```
 
 ### Similarity Coefficients for Nasal v. PBMC Limma, DESeq analyses
@@ -113,12 +157,15 @@ setdiff(ctrl_limma, common_limma)
 ```{r}
 
 print("DESeq similarity coefficient for Nasal v. PBMC samples")
-length(common_deseq) / length(union(nasal_deseq, ctrl_deseq))
+length(common.deseq) / length(union(nasal.deseq, ctrl.deseq))
 
 print("LIMMA similarity coefficient for Nasal v. PBMC samples")
-length(common_limma) / length(union(nasal_limma, ctrl_limma))
+length(common.limma) / length(union(nasal.limma, ctrl.limma))
 
 ```
+
+
+
 
 ## Nasopharynx and LPS Treatment PBMC {.tabset}
 
@@ -126,23 +173,23 @@ length(common_limma) / length(union(nasal_limma, ctrl_limma))
 
 ```{r}
 
-(common_deseq <- intersect(nasal_deseq, LPS_deseq)) 
-(common_limma <- intersect(nasal_limma, LPS_limma))
+(common.deseq <- intersect(nasal.deseq, LPS.deseq)) 
+(common.limma <- intersect(nasal.limma, LPS.limma))
 
 ```
 
 ### Significant genes for nasal mucusal samples only
 
 ```{r}
-setdiff(nasal_deseq, common_deseq)
-setdiff(nasal_limma, common_limma)
+setdiff(nasal.deseq, common.deseq)
+setdiff(nasal.limma, common.limma)
 ```
 
 ### Significant genes for LPS Treatment group only
 
 ```{r}
-setdiff(LPS_deseq, common_deseq)
-setdiff(LPS_limma, common_limma)
+setdiff(LPS.deseq, common.deseq)
+setdiff(LPS.limma, common.limma)
 ```
 
 ### Similarity Coefficients for Nasal v. PBMC Limma, DESeq analyses
@@ -150,10 +197,10 @@ setdiff(LPS_limma, common_limma)
 ```{r}
 
 print("DESeq similarity coefficient for Nasal v. PBMC samples")
-length(common_deseq) / length(union(nasal_deseq, LPS_deseq))
+length(common.deseq) / length(union(nasal.deseq, LPS.deseq))
 
 print("LIMMA similarity coefficient for Nasal v. PBMC samples")
-length(common_limma) / length(union(nasal_limma, LPS_limma))
+length(common.limma) / length(union(nasal.limma, LPS.limma))
 
 ```
 
@@ -165,23 +212,23 @@ length(common_limma) / length(union(nasal_limma, LPS_limma))
 
 ```{r}
 
-( common_deseq <- intersect(nasophar.deseq, nasal.deseq) ) 
-( common_limma <- intersect(nasophar.limma, nasal.limma) )
+( common.deseq <- intersect(nasophar.deseq, nasal.deseq) ) 
+( common.limma <- intersect(nasophar.limma, nasal.limma) )
 
 ```
 
 ### Significant genes for CVID nasopharynx mucosal samples only
 
 ```{r}
-setdiff(nasophar.deseq, common_deseq)
-setdiff(nasophar.limma, common_limma)
+setdiff(nasophar.deseq, common.deseq)
+setdiff(nasophar.limma, common.limma)
 ```
 
 ### Significant genes for TB nasal sample group only
 
 ```{r}
-setdiff(nasal.deseq, common_deseq)
-setdiff(nasal.limma, common_limma)
+setdiff(nasal.deseq, common.deseq)
+setdiff(nasal.limma, common.limma)
 ```
 
 ### Similarity Coefficients for CVID Nasopharynx v. TB Nasal Limma, DESeq analyses
@@ -189,11 +236,24 @@ setdiff(nasal.limma, common_limma)
 ```{r}
 
 print("DESeq similarity coefficient for CVID Nasopharynx v. TB Nasal samples")
-length(common_deseq) / length(union(nasophar.deseq, nasal.deseq))
+length(common.deseq) / length(union(nasophar.deseq, nasal.deseq))
 
 print("LIMMA similarity coefficient for CVID Nasopharynx v. TB Nasal samples")
-length(common_limma) / length(union(nasophar.limma, nasal.limma))
+length(common.limma) / length(union(nasophar.limma, nasal.limma))
 
+```
+
+### Pathways {.tabset}
+
+#### Deseq
+```{r}
+showPathways(common.deseq)
+```
+
+
+#### LIMMA
+```{r}
+showPathways(common.limma)
 ```
 
 ## TB Blood and CVID PBMC LPS Treatment Samples {.tabset}
@@ -202,23 +262,23 @@ length(common_limma) / length(union(nasophar.limma, nasal.limma))
 
 ```{r}
 
-(common_deseq <- intersect(blood.deseq, LPS.deseq)) 
-(common_limma <- intersect(blood.limma, LPS.limma))
+(common.deseq <- intersect(blood.deseq, LPS.deseq)) 
+(common.limma <- intersect(blood.limma, LPS.limma))
 
 ```
 
 ### Significant genes for TB samples only
 
 ```{r}
-setdiff(blood.deseq, common_deseq)
-setdiff(blood.limma, common_limma)
+setdiff(blood.deseq, common.deseq)
+setdiff(blood.limma, common.limma)
 ```
 
 ### Significant genes for PBMC LPS Treatment group only
 
 ```{r}
-setdiff(LPS.deseq, common_deseq)
-setdiff(LPS.limma, common_limma)
+setdiff(LPS.deseq, common.deseq)
+setdiff(LPS.limma, common.limma)
 ```
 
 ### Similarity Coefficients for TB Blood v.CVID PBMC Limma, DESeq analyses
@@ -226,11 +286,24 @@ setdiff(LPS.limma, common_limma)
 ```{r}
 
 print("DESeq similarity coefficient for TB Blood v. CVID PBMC samples")
-length(common_deseq) / length(union(blood.deseq, LPS.deseq))
+length(common.deseq) / length(union(blood.deseq, LPS.deseq))
 
 print("LIMMA similarity coefficient for Nasal v. PBMC samples")
-length(common_limma) / length(union(blood.limma, LPS.limma))
+length(common.limma) / length(union(blood.limma, LPS.limma))
 
+```
+
+### Pathways {.tabset}
+
+#### Deseq
+```{r}
+showPathways(common.deseq)
+```
+
+
+#### LIMMA
+```{r}
+showPathways(common.limma)
 ```
 
 ## TB Blood and CVID PBMC Non-Treatment (LPS control) Samples {.tabset}
@@ -239,23 +312,23 @@ length(common_limma) / length(union(blood.limma, LPS.limma))
 
 ```{r}
 
-(common_deseq <- intersect(blood.deseq, ctrl.deseq)) 
-(common_limma <- intersect(blood.limma, ctrl.limma))
+(common.deseq <- intersect(blood.deseq, ctrl.deseq)) 
+(common.limma <- intersect(blood.limma, ctrl.limma))
 
 ```
 
 ### Significant genes for TB Blood samples only
 
 ```{r}
-setdiff(blood.deseq, common_deseq)
-setdiff(blood.limma, common_limma)
+setdiff(blood.deseq, common.deseq)
+setdiff(blood.limma, common.limma)
 ```
 
 ### Significant genes for PBMC Non-treatment group only
 
 ```{r}
-setdiff(ctrl.deseq, common_deseq)
-setdiff(ctrl.limma, common_limma)
+setdiff(ctrl.deseq, common.deseq)
+setdiff(ctrl.limma, common.limma)
 ```
 
 ### Similarity Coefficients for TB Blood v.CVID PBMC Limma, DESeq analyses
@@ -263,12 +336,24 @@ setdiff(ctrl.limma, common_limma)
 ```{r}
 
 print("DESeq similarity coefficient for TB Blood v. CVID PBMC samples")
-length(common_deseq) / length(union(blood.deseq, ctrl.deseq))
+length(common.deseq) / length(union(blood.deseq, ctrl.deseq))
 
 print("LIMMA similarity coefficient for Nasal v. PBMC samples")
-length(common_limma) / length(union(blood.limma, ctrl.limma))
+length(common.limma) / length(union(blood.limma, ctrl.limma))
 ```
 
+### Pathways {.tabset}
+
+#### Deseq
+```{r}
+showPathways(common.deseq)
+```
+
+
+#### LIMMA
+```{r}
+showPathways(common.limma)
+```
 
 ## TB Blood and CVID Nasopharynx Samples {.tabset}
 
@@ -276,23 +361,23 @@ length(common_limma) / length(union(blood.limma, ctrl.limma))
 
 ```{r}
 
-(common_deseq <- intersect(blood.deseq, nasophar.deseq)) 
-(common_limma <- intersect(blood.limma, nasophar.limma))
+(common.deseq <- intersect(blood.deseq, nasophar.deseq)) 
+(common.limma <- intersect(blood.limma, nasophar.limma))
 
 ```
 
 ### Significant genes for TB Blood samples only
 
 ```{r}
-setdiff(blood.deseq, common_deseq)
-setdiff(blood.limma, common_limma)
+setdiff(blood.deseq, common.deseq)
+setdiff(blood.limma, common.limma)
 ```
 
 ### Significant genes for PBMC Non-treatment group only
 
 ```{r}
-setdiff(nasophar.deseq, common_deseq)
-setdiff(nasophar.limma, common_limma)
+setdiff(nasophar.deseq, common.deseq)
+setdiff(nasophar.limma, common.limma)
 ```
 
 ### Similarity Coefficients for TB Blood v. CVID PBMC Limma, DESeq analyses
@@ -300,10 +385,23 @@ setdiff(nasophar.limma, common_limma)
 ```{r}
 
 print("DESeq similarity coefficient for TB Blood v. CVID PBMC samples")
-length(common_deseq) / length(union(blood.deseq, nasophar.deseq))
+length(common.deseq) / length(union(blood.deseq, nasophar.deseq))
 
 print("LIMMA similarity coefficient for Nasal v. PBMC samples")
-length(common_limma) / length(union(blood.limma, nasophar.limma))
+length(common.limma) / length(union(blood.limma, nasophar.limma))
+```
+
+### Pathways {.tabset}
+
+#### Deseq
+```{r}
+showPathways(common.deseq)
+```
+
+
+#### LIMMA
+```{r}
+showPathways(common.limma)
 ```
 
 ## TB Nasal and CVID PBMC LPS-Treatment Samples {.tabset}
@@ -312,23 +410,23 @@ length(common_limma) / length(union(blood.limma, nasophar.limma))
 
 ```{r}
 
-(common_deseq <- intersect(nasal.deseq, LPS.deseq)) 
-(common_limma <- intersect(nasal.limma, LPS.limma))
+(common.deseq <- intersect(nasal.deseq, LPS.deseq)) 
+(common.limma <- intersect(nasal.limma, LPS.limma))
 
 ```
 
 ### Significant genes for TB Blood samples only
 
 ```{r}
-setdiff(nasal.deseq, common_deseq)
-setdiff(nasal.limma, common_limma)
+setdiff(nasal.deseq, common.deseq)
+setdiff(nasal.limma, common.limma)
 ```
 
 ### Significant genes for PBMC Non-treatment group only
 
 ```{r}
-setdiff(LPS.deseq, common_deseq)
-setdiff(LPS.limma, common_limma)
+setdiff(LPS.deseq, common.deseq)
+setdiff(LPS.limma, common.limma)
 ```
 
 ### Similarity Coefficients for TB Blood v.CVID PBMC Limma, DESeq analyses
@@ -336,10 +434,23 @@ setdiff(LPS.limma, common_limma)
 ```{r}
 
 print("DESeq similarity coefficient for TB Blood v. CVID PBMC samples")
-length(common_deseq) / length(union(nasal.deseq, LPS.deseq))
+length(common.deseq) / length(union(nasal.deseq, LPS.deseq))
 
 print("LIMMA similarity coefficient for Nasal v. PBMC samples")
-length(common_limma) / length(union(nasal.limma, LPS.limma))
+length(common.limma) / length(union(nasal.limma, LPS.limma))
+```
+
+### Pathways {.tabset}
+
+#### Deseq
+```{r}
+showPathways(common.deseq)
+```
+
+
+#### LIMMA
+```{r}
+showPathways(common.limma)
 ```
 
 ## TB Nasal and CVID PBMC Non-Treatment (LPS control) Samples {.tabset}
@@ -348,23 +459,23 @@ length(common_limma) / length(union(nasal.limma, LPS.limma))
 
 ```{r}
 
-(common_deseq <- intersect(nasal.deseq, ctrl.deseq)) 
-(common_limma <- intersect(nasal.limma, ctrl.limma))
+(common.deseq <- intersect(nasal.deseq, ctrl.deseq)) 
+(common.limma <- intersect(nasal.limma, ctrl.limma))
 
 ```
 
 ### Significant genes for TB Blood samples only
 
 ```{r}
-setdiff(nasal.deseq, common_deseq)
-setdiff(nasal.limma, common_limma)
+setdiff(nasal.deseq, common.deseq)
+setdiff(nasal.limma, common.limma)
 ```
 
 ### Significant genes for PBMC Non-treatment group only
 
 ```{r}
-setdiff(ctrl.deseq, common_deseq)
-setdiff(ctrl.limma, common_limma)
+setdiff(ctrl.deseq, common.deseq)
+setdiff(ctrl.limma, common.limma)
 ```
 
 ### Similarity Coefficients for TB Blood v.CVID PBMC Limma, DESeq analyses
@@ -372,8 +483,21 @@ setdiff(ctrl.limma, common_limma)
 ```{r}
 
 print("DESeq similarity coefficient for TB Blood v. CVID PBMC samples")
-length(common_deseq) / length(union(nasal.deseq, ctrl.deseq))
+length(common.deseq) / length(union(nasal.deseq, ctrl.deseq))
 
 print("LIMMA similarity coefficient for Nasal v. PBMC samples")
-length(common_limma) / length(union(nasal.limma, ctrl.limma))
+length(common.limma) / length(union(nasal.limma, ctrl.limma))
+```
+
+### Pathways {.tabset}
+
+#### Deseq
+```{r}
+showPathways(common.deseq)
+```
+
+
+#### LIMMA
+```{r}
+showPathways(common.limma)
 ```

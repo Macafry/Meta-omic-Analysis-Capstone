@@ -55,6 +55,7 @@ nasal.counts.df <- read.csv("data/nasalcounts.csv", row.names = 1)
 # filter patient data without a match on expression count dataframes
 relevant.rows <- meta_data$sample_name_rnacounts_file %in% c(names(blood.counts.df), names(nasal.counts.df)) 
 meta_data <- meta_data[relevant.rows,]
+meta_data$status <- factor(meta_data$status,levels = c("control","case"))
 
 # split patient data into blood and nasal samples
 blood.meta_data <- meta_data[meta_data$type == "blood",]
@@ -102,6 +103,10 @@ counts <- assay(se.blood, "counts")
 meta_data <- colData(se.blood)
 disease <- meta_data$status
 group <- meta_data$status
+x <- meta_data$sample_id
+labels <- sapply(strsplit(x, "-"), function(parts) {
+  paste0(as.numeric(parts[2]), "-", as.numeric(parts[3]))
+})
 ```
 
 ### Visualization and Dimension reduction {.tabset}
@@ -121,7 +126,7 @@ pca_plot$disease <- as.factor(disease) # color/group
 # plot PC1 and PC2 by IDC
 g <- pca_plot %>% ggplot(aes(x=PC1, y=PC2, color=disease)) +
   geom_point(size=1.5) + xlab("PC 1") + ylab("PC 2") +
-  geom_text(label=meta_data$sample_id, nudge_y = 5,) +
+  geom_text(label=labels, nudge_y = 5,) +
   theme(plot.title = element_text(hjust = 0.5)) +
   ggtitle("PCA Plot - Blood Treatment")
 
@@ -144,7 +149,7 @@ umap_plot$disease <- as.factor(disease) # color / group
 # plot UMAP1 and UMAP2 by IDC
 g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=disease)) +
   geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
-  geom_text(label=meta_data$sample_id, nudge_y = 0.1,) +
+  geom_text(label=labels, nudge_y = 0.1,) +
   theme(plot.title = element_text(hjust = 0.5)) +
   ggtitle("UMAP Plot - Blood Treatment")
 
@@ -341,6 +346,10 @@ counts <- assay(se.nasal, "counts")
 meta_data <- colData(se.nasal)
 disease <- meta_data$status
 group <- meta_data$status
+x <- meta_data$sample_id
+labels <- sapply(strsplit(x, "-"), function(parts) {
+  paste0(as.numeric(parts[2]), "-", as.numeric(parts[3]))
+})
 ```
 
 ### Visualization and Dimension reduction {.tabset}
@@ -360,7 +369,7 @@ pca_plot$disease <- as.factor(disease) # color/group
 # plot PC1 and PC2 by IDC
 g <- pca_plot %>% ggplot(aes(x=PC1, y=PC2, color=disease)) +
   geom_point(size=1.5) + xlab("PC 1") + ylab("PC 2") +
-  geom_text(label=meta_data$sample_id, nudge_y = 5,) +
+  geom_text(label=labels, nudge_y = 5,) +
   theme(plot.title = element_text(hjust = 0.5)) +
   ggtitle("PCA Plot - Nasal Treatment")
 
@@ -383,7 +392,7 @@ umap_plot$disease <- as.factor(se.nasal$disease) # color / group
 # plot UMAP1 and UMAP2 by IDC
 g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=disease)) +
   geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
-  geom_text(label=meta_data$sample_id, nudge_y = 0.1,) +
+  geom_text(label=labels, nudge_y = 0.1,) +
   theme(plot.title = element_text(hjust = 0.5)) +
   ggtitle("UMAP Plot - Nasal Treatment")
 
@@ -571,7 +580,7 @@ nasal.limma <- limma250
 
 ```
 
-<<<<<<< HEAD
+
 
 # Comparative analysis
 
