@@ -1,0 +1,379 @@
+---
+title: "Comparative Results Analysis of Immune Deficiency RNA-Seq Data"
+author: W. Evan Johnson, Ph.D., Ian Mc Farlane, Bram Stults
+date: "`r Sys.Date()`"
+header-includes:
+   - \usepackage{amsmath}
+output:
+  html_document:
+    code_folding: show
+    toc: true
+    toc_float: true
+    theme: "flatly"
+editor_options: 
+  chunk_output_type: console
+tables: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readr)
+
+```
+
+### Load top 250 DEGs per sample/group
+
+```{r}
+# WD set to /Deliverable 3/data directory
+# setwd("~/Documents/.../Meta-omic-Analysis-Capstone/Deliverable 3")
+
+results_1_df <- read_csv("data/NasalCVID_results_top250.csv")
+nasophar.deseq <- results_1_df$deseq250
+nasophar.limma <- results_1_df$limma250
+
+results_2_df <- read_csv("data/PBMC_results_top250.csv")
+ctrl.deseq <- results_2_df$ctrl_deseq
+ctrl.limma <- results_2_df$ctrl_limma
+LPS.deseq <- results_2_df$LPS_deseq
+LPS.limma <- results_2_df$LPS_limma
+
+results_3_df <- read_csv("data/TB_results_top250.csv")
+nasal.deseq <- results_3_df$nasal.deseq
+nasal.limma <- results_3_df$nasal.limma
+blood.deseq <- results_3_df$blood.deseq
+blood.limma <- results_3_df$blood.limma
+
+
+
+```
+
+## Comparison {.tabset}
+
+## PBMC - LPS v. Healthy Control {.tabset}
+
+### Common Significant genes
+
+```{r}
+(common_deseq <- intersect(LPS_deseq, ctrl_deseq))
+(common_limma <- intersect(LPS_limma, ctrl_limma))
+```
+
+### Significant genes for LPS group only
+
+```{r}
+setdiff(LPS_deseq, common_deseq)
+setdiff(LPS_limma, common_limma)
+```
+
+### Significant genes for Control group only
+
+```{r}
+setdiff(ctrl_deseq, common_deseq)
+setdiff(ctrl_limma, common_limma)
+```
+
+### Similarity Coefficients for Limma, DESeq analyses
+
+```{r}
+print("DESeq similarity coefficient")
+length(common_deseq) / length(union(LPS_deseq, ctrl_deseq))
+
+print("LIMMA similarity coefficient")
+length(common_limma) / length(union(LPS_limma, ctrl_limma))
+```
+
+## Nasopharynx and Healthy Control PBMC {.tabset}
+
+### Common Significant genes:
+
+```{r}
+
+(common_deseq <- intersect(nasal_deseq, ctrl_deseq)) 
+(common_limma <- intersect(nasal_limma, ctrl_limma))
+
+```
+
+### Significant genes for nasal mucusal samples only
+
+```{r}
+setdiff(nasal_deseq, common_deseq)
+setdiff(nasal_limma, common_limma)
+```
+
+### Significant genes for Control group only
+
+```{r}
+setdiff(ctrl_deseq, common_deseq)
+setdiff(ctrl_limma, common_limma)
+```
+
+### Similarity Coefficients for Nasal v. PBMC Limma, DESeq analyses
+
+```{r}
+
+print("DESeq similarity coefficient for Nasal v. PBMC samples")
+length(common_deseq) / length(union(nasal_deseq, ctrl_deseq))
+
+print("LIMMA similarity coefficient for Nasal v. PBMC samples")
+length(common_limma) / length(union(nasal_limma, ctrl_limma))
+
+```
+
+## Nasopharynx and LPS Treatment PBMC {.tabset}
+
+### Common Significant genes:
+
+```{r}
+
+(common_deseq <- intersect(nasal_deseq, LPS_deseq)) 
+(common_limma <- intersect(nasal_limma, LPS_limma))
+
+```
+
+### Significant genes for nasal mucusal samples only
+
+```{r}
+setdiff(nasal_deseq, common_deseq)
+setdiff(nasal_limma, common_limma)
+```
+
+### Significant genes for LPS Treatment group only
+
+```{r}
+setdiff(LPS_deseq, common_deseq)
+setdiff(LPS_limma, common_limma)
+```
+
+### Similarity Coefficients for Nasal v. PBMC Limma, DESeq analyses
+
+```{r}
+
+print("DESeq similarity coefficient for Nasal v. PBMC samples")
+length(common_deseq) / length(union(nasal_deseq, LPS_deseq))
+
+print("LIMMA similarity coefficient for Nasal v. PBMC samples")
+length(common_limma) / length(union(nasal_limma, LPS_limma))
+
+```
+
+# Deliverable 5
+
+## TB Nasal and CVID Nasopharynx Samples {.tabset}
+
+### Common Significant genes:
+
+```{r}
+
+( common_deseq <- intersect(nasophar.deseq, nasal.deseq) ) 
+( common_limma <- intersect(nasophar.limma, nasal.limma) )
+
+```
+
+### Significant genes for CVID nasopharynx mucosal samples only
+
+```{r}
+setdiff(nasophar.deseq, common_deseq)
+setdiff(nasophar.limma, common_limma)
+```
+
+### Significant genes for TB nasal sample group only
+
+```{r}
+setdiff(nasal.deseq, common_deseq)
+setdiff(nasal.limma, common_limma)
+```
+
+### Similarity Coefficients for CVID Nasopharynx v. TB Nasal Limma, DESeq analyses
+
+```{r}
+
+print("DESeq similarity coefficient for CVID Nasopharynx v. TB Nasal samples")
+length(common_deseq) / length(union(nasophar.deseq, nasal.deseq))
+
+print("LIMMA similarity coefficient for CVID Nasopharynx v. TB Nasal samples")
+length(common_limma) / length(union(nasophar.limma, nasal.limma))
+
+```
+
+## TB Blood and CVID PBMC LPS Treatment Samples {.tabset}
+
+### Common Significant genes:
+
+```{r}
+
+(common_deseq <- intersect(blood.deseq, LPS.deseq)) 
+(common_limma <- intersect(blood.limma, LPS.limma))
+
+```
+
+### Significant genes for TB samples only
+
+```{r}
+setdiff(blood.deseq, common_deseq)
+setdiff(blood.limma, common_limma)
+```
+
+### Significant genes for PBMC LPS Treatment group only
+
+```{r}
+setdiff(LPS.deseq, common_deseq)
+setdiff(LPS.limma, common_limma)
+```
+
+### Similarity Coefficients for TB Blood v.CVID PBMC Limma, DESeq analyses
+
+```{r}
+
+print("DESeq similarity coefficient for TB Blood v. CVID PBMC samples")
+length(common_deseq) / length(union(blood.deseq, LPS.deseq))
+
+print("LIMMA similarity coefficient for Nasal v. PBMC samples")
+length(common_limma) / length(union(blood.limma, LPS.limma))
+
+```
+
+## TB Blood and CVID PBMC Non-Treatment (LPS control) Samples {.tabset}
+
+### Common Significant genes:
+
+```{r}
+
+(common_deseq <- intersect(blood.deseq, ctrl.deseq)) 
+(common_limma <- intersect(blood.limma, ctrl.limma))
+
+```
+
+### Significant genes for TB Blood samples only
+
+```{r}
+setdiff(blood.deseq, common_deseq)
+setdiff(blood.limma, common_limma)
+```
+
+### Significant genes for PBMC Non-treatment group only
+
+```{r}
+setdiff(ctrl.deseq, common_deseq)
+setdiff(ctrl.limma, common_limma)
+```
+
+### Similarity Coefficients for TB Blood v.CVID PBMC Limma, DESeq analyses
+
+```{r}
+
+print("DESeq similarity coefficient for TB Blood v. CVID PBMC samples")
+length(common_deseq) / length(union(blood.deseq, ctrl.deseq))
+
+print("LIMMA similarity coefficient for Nasal v. PBMC samples")
+length(common_limma) / length(union(blood.limma, ctrl.limma))
+```
+
+
+## TB Blood and CVID Nasopharynx Samples {.tabset}
+
+### Common Significant genes:
+
+```{r}
+
+(common_deseq <- intersect(blood.deseq, nasophar.deseq)) 
+(common_limma <- intersect(blood.limma, nasophar.limma))
+
+```
+
+### Significant genes for TB Blood samples only
+
+```{r}
+setdiff(blood.deseq, common_deseq)
+setdiff(blood.limma, common_limma)
+```
+
+### Significant genes for PBMC Non-treatment group only
+
+```{r}
+setdiff(nasophar.deseq, common_deseq)
+setdiff(nasophar.limma, common_limma)
+```
+
+### Similarity Coefficients for TB Blood v. CVID PBMC Limma, DESeq analyses
+
+```{r}
+
+print("DESeq similarity coefficient for TB Blood v. CVID PBMC samples")
+length(common_deseq) / length(union(blood.deseq, nasophar.deseq))
+
+print("LIMMA similarity coefficient for Nasal v. PBMC samples")
+length(common_limma) / length(union(blood.limma, nasophar.limma))
+```
+
+## TB Nasal and CVID PBMC LPS-Treatment Samples {.tabset}
+
+### Common Significant genes:
+
+```{r}
+
+(common_deseq <- intersect(nasal.deseq, LPS.deseq)) 
+(common_limma <- intersect(nasal.limma, LPS.limma))
+
+```
+
+### Significant genes for TB Blood samples only
+
+```{r}
+setdiff(nasal.deseq, common_deseq)
+setdiff(nasal.limma, common_limma)
+```
+
+### Significant genes for PBMC Non-treatment group only
+
+```{r}
+setdiff(LPS.deseq, common_deseq)
+setdiff(LPS.limma, common_limma)
+```
+
+### Similarity Coefficients for TB Blood v.CVID PBMC Limma, DESeq analyses
+
+```{r}
+
+print("DESeq similarity coefficient for TB Blood v. CVID PBMC samples")
+length(common_deseq) / length(union(nasal.deseq, LPS.deseq))
+
+print("LIMMA similarity coefficient for Nasal v. PBMC samples")
+length(common_limma) / length(union(nasal.limma, LPS.limma))
+```
+
+## TB Nasal and CVID PBMC Non-Treatment (LPS control) Samples {.tabset}
+
+### Common Significant genes:
+
+```{r}
+
+(common_deseq <- intersect(nasal.deseq, ctrl.deseq)) 
+(common_limma <- intersect(nasal.limma, ctrl.limma))
+
+```
+
+### Significant genes for TB Blood samples only
+
+```{r}
+setdiff(nasal.deseq, common_deseq)
+setdiff(nasal.limma, common_limma)
+```
+
+### Significant genes for PBMC Non-treatment group only
+
+```{r}
+setdiff(ctrl.deseq, common_deseq)
+setdiff(ctrl.limma, common_limma)
+```
+
+### Similarity Coefficients for TB Blood v.CVID PBMC Limma, DESeq analyses
+
+```{r}
+
+print("DESeq similarity coefficient for TB Blood v. CVID PBMC samples")
+length(common_deseq) / length(union(nasal.deseq, ctrl.deseq))
+
+print("LIMMA similarity coefficient for Nasal v. PBMC samples")
+length(common_limma) / length(union(nasal.limma, ctrl.limma))
+```
