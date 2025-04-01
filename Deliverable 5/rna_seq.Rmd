@@ -62,7 +62,7 @@ meta_data$status <- factor(meta_data$status,levels = c("control","case"))
 blood.meta_data <- meta_data[meta_data$type == "blood",]
 nasal.meta_data <- meta_data[meta_data$type == "nasal",]
 
-# indentify patients that performed both trials
+# identify patients that performed both trials
 samples_of_interest <- intersect(blood.meta_data$sample_id, nasal.meta_data$sample_id)
 
 # blood: filter for the patients that also participated in nasal sampling
@@ -82,7 +82,7 @@ nasal.counts.df <- nasal.counts.df[,columns]
 se.blood <- SummarizedExperiment(assays=list(counts=blood.counts.df), colData=blood.meta_data)
 se.nasal <- SummarizedExperiment(assays=list(counts=nasal.counts.df), colData=nasal.meta_data)
 
-# add log*cpm asssays
+# add log*cpm assays
 se.blood <- mkAssay(se.blood, log = TRUE, counts_to_CPM = TRUE)
 se.nasal <- mkAssay(se.nasal, log = TRUE, counts_to_CPM = TRUE)
 
@@ -177,7 +177,7 @@ dds<-DESeq(dds) #Performs estimation of size factors, dispersion, and negative b
 res <- results(dds)[order(results(dds)[,6]),]
 #res[1:10,]
 
-# dislpay results for the top 1000 most significant genes
+# display results for the top 1000 most significant genes
 datatable(data.frame(res[1:1000,]))
 
 # store the name of the top 250 most significant genes
@@ -642,8 +642,65 @@ combined_results$ctrl_padj <- NULL
 datatable(combined_results)
 ```
 
+## Monte Carlo Simulation of Jaccard Index
 
-## Patways
+```{r}
+
+# function for commonality coefficient 
+commonality_coefficient <- function(sample1, sample2) {
+  intersection <- intersect(rownames(sample1), rownames(sample2))
+  union <- union(rownames(sample1), rownames(sample2))
+  return(length(intersection) / length(union))
+}
+
+# number of simulations
+num_sims <- 100000
+
+# number of genes to sample
+sample_size <- 250
+
+# result vector
+common_coeffs <- numeric(num_sims)
+
+# Loop
+for (i in 1:num_sims) {
+  
+  # randomly selecting 250 row indices from full blood.res results
+  blood.indices <- sample(nrow(blood.res), 
+                          size = sample_size, 
+                          replace = F) #
+  blood.sample <- blood.res[blood.indices, ]
+  
+  # randomly selecting 250 row indices from full results nasal.res
+  nasal.indices <- sample(nrow(nasal.res), 
+                      size = sample_size, 
+                      replace = F) # 
+  nasal.sample <- nasal.res[nasal.indices, ]
+
+  # calculating and storing commonality coefficient for samples
+  coefficient <- commonality_coefficient(blood.sample, nasal.sample)
+  common_coeffs[i] <- coefficient
+}
+
+mean_commonality <- mean(common_coeffs)
+sd_commonality <- sd(common_coeffs)
+
+cat("Mean Commonality Coefficient:", mean_commonality, "\n")
+cat("Standard deviation:", sd_commonality, "\n")
+
+hist(common_coeffs, 
+     main = "Distribution of Commonality Coefficients", 
+     xlab = "Commonality Coefficient")
+
+#Probability of obtaining Jaccard index greater than obtained Deseq coefficient
+mean(common_coeffs >= 0.02669405) #mean of True/False logical vector T/F --> 1/0
+
+
+
+```
+If the 250 genes in a list were completely random, there is a 0.0004% chance that the resulting commonality coefficients of those lists would be as large as or larger than 0.02669405 obtained here.
+
+## Pathways
 ```{r}
 
 enriched <- enrichr(rownames(combined_results), dbs)

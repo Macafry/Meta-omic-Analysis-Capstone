@@ -64,13 +64,14 @@ showPathways <- function(gene_names) {
     datatable(combined_df)
 }
 
+
 ```
 
 ### Load top 250 DEGs per sample/group
 
 ```{r}
-# WD set to /Deliverable 3/data directory
-# setwd("~/Documents/.../Meta-omic-Analysis-Capstone/Deliverable 3")
+# WD set to /Deliverable 5/data directory
+# setwd("~/Documents/.../Meta-omic-Analysis-Capstone/Deliverable 5")
 
 results_1_df <- read_csv("data/NasalCVID_results_top250.csv")
 nasophar.deseq <- results_1_df$deseq250
