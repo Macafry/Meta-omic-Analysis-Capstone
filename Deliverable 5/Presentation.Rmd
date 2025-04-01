@@ -1,0 +1,735 @@
+---
+title: "Integrative Analysis of\nCommon Variable Immunodeficiency (CVID)"
+author: "Ian Mc Farlane, Bram Stults, advised by W. Evan Johnson, Ph.D."
+date: "`r Sys.Date()`"
+output: slidy_presentation
+header-includes:
+   - \usepackage{amsmath}
+editor_options: 
+  chunk_output_type: console
+tables: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(readr)
+library(Rsubread)
+library(Rsamtools)
+library(SummarizedExperiment)
+library(edgeR)
+library(DESeq2)
+library(ComplexHeatmap)
+library(TBSignatureProfiler)
+library(umap)
+library(tidyverse)
+library(DT)
+library(GSVA)
+library(enrichR)
+library(biomaRt)
+library(rprojroot)
+library(fs)
+library(dplyr)
+library(patchwork)
+library(gridExtra)
+library(ComplexHeatmap)
+
+# define pathway libraries
+dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
+
+```
+
+
+```{r read_in_blood, include=FALSE}
+# read RNA expression counts and patient data
+load(file="data/readMatrix_PBMC_BulkRNAseq_CVID.Rdata")
+
+mt.counts.df <- read.csv("data/translated_genes.txt", row.names = 1)
+groups <- sample.info$disease 
+
+subs = c(UCVID = "Deficient (CVID)",
+         CVID = "Deficient (CVID)",
+         healthy = "Control (Healthy)",
+         NCVID = "remove")
+
+
+groups <- unname( subs[match(groups, names(subs))] )
+
+# store index of NCVID subjects
+remove_NCVID_index <- which(groups == "remove")
+
+# update group label vector
+groups <- groups[groups != "remove"] 
+groups <- factor(groups)
+
+
+#updating dataframes
+mt.counts.df <- mt.counts.df[,-remove_NCVID_index]
+sample.info <- sample.info[-remove_NCVID_index,]
+sample.info$Condition <- groups
+
+#  re-store results
+counts <- mt.counts.df
+meta_data <- sample.info
+
+# isolate group indicator variable
+group <- meta_data$disease
+
+# aggregate patient and expression data into a single object
+se_cvid <- SummarizedExperiment(assays=list(counts=counts),
+                     colData = meta_data)
+
+
+# isolating treatment group experiments
+treatments <- meta_data$treatment
+ctrl_index <- which(treatments == "ctrl")
+LPS_index <- which(treatments == "LPS")
+
+counts_ctrl <- counts[,-LPS_index]
+counts_LPS <- counts[,-ctrl_index]
+
+meta_data_ctrl <- meta_data[-LPS_index,]
+meta_data_LPS <- meta_data[-ctrl_index,]
+
+se_cvid_ctrl <- SummarizedExperiment(assays=list(counts=counts_ctrl),
+                     colData = meta_data_ctrl)
+se_cvid_LPS <- SummarizedExperiment(assays=list(counts=counts_LPS),
+                     colData = meta_data_LPS)
+
+# create counts per million, log counts and log counts per million features
+# and save them into new assays
+se_cvid <- mkAssay(se_cvid, log = TRUE, counts_to_CPM = TRUE)
+# same for control only
+se_cvid_ctrl <- mkAssay(se_cvid_ctrl, log = TRUE, counts_to_CPM = TRUE)
+# same for LPS treatment group only
+se_cvid_LPS <- mkAssay(se_cvid_LPS, log = TRUE, counts_to_CPM = TRUE)
+```
+
+
+```{r read_in_nasal, include=FALSE}
+
+# read RNA expression counts
+counts <- read.table("data/features_combined.txt", sep="\t", 
+                     header=T, row.names=1)
+# read patient data
+meta_data <- read.table("data/meta_data.txt", sep="\t", 
+                     header=T, row.names=1)
+
+# isolate group indicator variable
+group <- meta_data$Condition
+group <- ifelse(group == "Control", "Control (Healthy)", "Deficient (CVID)")
+meta_data$Condition <- group
+
+# aggregate patient and expression data into a single object
+se_immunedef <- SummarizedExperiment(assays=list(counts=counts),
+                     colData = meta_data)
+
+# create counts per million, log counts and log counts per million features 
+# and save them into new assays.
+se_immunedef <- mkAssay(se_immunedef, log = TRUE, counts_to_CPM = TRUE)
+
+# display all assays
+assays(se_immunedef)
+```
+
+# Review
+
+## Methods
+
+- We analyzed:
+  - Nasopharyngeal Samples from Dr Johnson
+  - PBMC Samples with LPS stimulated and control groups from Dr Maglione.
+
+- We compared the results of the first analysis to the results of each of the groups of the second analysis:
+  - Nasopharyngeal vs LPS stimulated
+  - Nasopharyngeal vs Control (LPS UNstimulated)
+    
+## Results summary
+
+- We identified the following types of pathways to be significantly affected in both comparisons:
+  - Focal adhesion
+  - Inflammation
+  - Chemokine receptors
+
+- Overarching Genes:
+  - ITGA4: Encodes integrin alpha-4, a cell adhesion molecule involved in leukocyte trafficking and immune cell migration.
+  - GPR55: Encodes a G protein-coupled receptor implicated in inflammatory responses, pain signaling, and cancer progression.
+  - CCR4: Encodes a chemokine receptor that regulates immune cell trafficking, particularly T-cell migration to inflammation sites.
+
+
+<!-- Fitting models -->
+```{r nasal_deseq_0, include=FALSE, cache=TRUE}
+# format data into a DESeq2-friendly Data Structure
+counts <- assay(se_immunedef, "counts")
+meta_data <- colData(se_immunedef)
+Condition <- meta_data$Condition
+
+dds <- DESeqDataSetFromMatrix(countData = counts, colData=meta_data, design=~Condition)
+#colData is a data frame of demographic/phenotypic data
+
+# filter for genes with significant expression  
+# expression should be > 0, but > 100 should be better
+dds<-dds[rowSums(counts(dds))>1,] #Gene Filtering
+
+# fit negative binomial regression
+dds<-DESeq(dds) #Performs estimation of size factors,dispersion, and negative binomial GLM f#itting
+
+# extracting results, ordering them by adjusted p-value
+res <- results(dds)[order(results(dds)[,6]),]
+
+# store the name of the top 1000 most significant genes, per Dr. Johnson
+nasal_deseq <- data.frame(res)
+nasal_deseq1000 <- rownames(res)[1:1000]
+```
+
+```{r ctrl_deseq_0, include=FALSE, cache=TRUE}
+# format data into a DESeq2-friendly Data Structure
+counts <- assay(se_cvid_ctrl, "counts")
+meta_data <- colData(se_cvid_ctrl)
+Condition <- meta_data$Condition
+
+dds <- DESeqDataSetFromMatrix(countData=counts, colData=meta_data, design=~Condition)
+#colData is a data frame of demographic/phenotypic data
+
+# filter for genes with significant expression  
+# expression should be > 0, but > 100 should be better
+dds<-dds[rowSums(counts(dds))>1,] #Gene Filtering
+
+# fit negative binomial regression
+dds<-DESeq(dds) #Performs estimation of size factors, dispersion, and negative binomial GLM f#itting
+
+# extracting results, ordering them by adjusted p-value
+res <- results(dds)[order(results(dds)[,6]),]
+#res[1:10,]
+
+# store the name of the top 1000 most significant genes, per Dr. Johnson
+ctrl_deseq <- data.frame(res)
+ctrl_deseq1000 <- rownames(res)[1:1000]
+```
+
+```{r pbmc_control_results}
+#top 1000 list used, pared to 250
+
+ctrl_results <- data.frame(gene = ctrl_deseq1000) %>%
+    mutate(
+        ctrl_padj = ctrl_deseq[ctrl_deseq1000,]$padj,
+        ctrl_effect = ctrl_deseq[ctrl_deseq1000,]$log2FoldChange
+    ) %>% 
+    mutate(
+        ctrl_effect = ifelse(ctrl_effect > 0, "Upregulated", "Downregulated")
+    ) %>% 
+    mutate(across(where(is.character), as.factor)) %>% 
+    arrange(ctrl_padj) %>% 
+    slice_head(n = 250)
+
+row.names(ctrl_results) <- ctrl_results$gene
+ctrl_results$gene <- NULL
+```
+
+
+```{r lps_deseq_0, include=FALSE, cache=TRUE}
+# format data into a DESeq2-friendly Data Structure
+counts <- assay(se_cvid_LPS, "counts")
+meta_data <- colData(se_cvid_LPS)
+Condition <- meta_data$Condition
+
+dds <- DESeqDataSetFromMatrix(countData=counts, colData=meta_data, design=~Condition)
+#colData is a data frame of demographic/phenotypic data
+
+# filter for genes with significant expression  
+# expression should be > 0, but > 100 should be better
+dds<-dds[rowSums(counts(dds))>1,] #Gene Filtering
+
+# fit negative binomial regression
+dds<-DESeq(dds) #Performs estimation of size factors, dispersion, and negative binomial GLM f#itting
+
+# extracting results, ordering them by adjusted p-value
+res <- results(dds)[order(results(dds)[,6]),]
+#res[1:10,]
+
+# store the name of the top 1000 most significant genes, per Dr. Johnson
+lps_deseq <- data.frame(res)
+lps_deseq1000 <- rownames(res)[1:1000]
+```
+
+
+```{r pbmc_lps_results}
+#top 1000 list used, pared to 250
+
+lps_results <- data.frame(gene = lps_deseq1000) %>%
+    mutate(
+        lps_padj = lps_deseq[lps_deseq1000,]$padj,
+        lps_effect = lps_deseq[lps_deseq1000,]$log2FoldChange
+    ) %>% 
+    mutate(
+        lps_effect = ifelse(lps_effect > 0, "Upregulated", "Downregulated")
+    ) %>% 
+    mutate(across(where(is.character), as.factor)) %>% 
+    arrange(lps_padj) %>% 
+    slice_head(n = 250)
+
+row.names(lps_results) <- lps_results$gene
+lps_results$gene <- NULL
+```
+<!-- END Fitting models -->
+
+## Nasal VS Control (Unstimulated) - Combined DEGs (DeSeq)
+```{r combined_results}
+common_genes <- intersect(row.names(nasal_deseq), row.names(ctrl_deseq))
+significance_threshold <- 0.2
+
+combined_results <- data.frame(gene = common_genes) %>%
+    mutate(
+        nasal_padj = nasal_deseq[common_genes,]$padj,
+        ctrl_padj = ctrl_deseq[common_genes,]$padj,
+        combined_chisq = -2*(log(nasal_padj) + log(ctrl_padj)),
+        nasal_effect = nasal_deseq[common_genes,]$log2FoldChange,
+        ctrl_effect = ctrl_deseq[common_genes,]$log2FoldChange,
+    ) %>% 
+    transmute(
+        gene = gene, nasal_padj = nasal_padj, ctrl_padj = ctrl_padj,
+        combined_p = 1 - pchisq(combined_chisq, 4),
+        nasal_effect = ifelse(nasal_effect > 0, "Upregulated", "Downregulated"),
+        ctrl_effect = ifelse(ctrl_effect > 0, "Upregulated", "Downregulated"),
+        reg_agreement = ifelse(ctrl_effect == nasal_effect, "Same", "Opposite"),
+    ) %>% 
+    mutate(across(where(is.character), as.factor))%>% 
+    filter(
+        !is.na(combined_p),
+        nasal_padj < significance_threshold,
+        ctrl_padj < significance_threshold,
+    ) %>%
+    arrange(combined_p) %>% 
+    slice_head(n = 250)
+
+row.names(combined_results) <- combined_results$gene
+combined_results$gene <- NULL
+combined_results$nasal_padj <- NULL
+combined_results$ctrl_padj <- NULL
+
+
+datatable(combined_results)
+```
+
+## Nasal VS Control (Unstimulated) - Combined Pathways
+```{r}
+# based on the results of DEseq, cross-reference the gene with pathway databases to infer which pathways are the most significant
+
+showPathways <- function(gene_names) {
+    invisible(capture.output(
+      enriched <- enrichr(gene_names, dbs)
+    ))
+    
+    combined_df <- bind_rows(
+          enriched$WikiPathways_2016 %>% mutate(database = "WikiPathways"),
+          enriched$KEGG_2016 %>% mutate(database = "KEGG"),
+          enriched$Panther_2016 %>% mutate(database = "Panther"),
+          enriched$Reactome_2016 %>% mutate(database = "Reactome")
+        ) %>%
+        arrange(Adjusted.P.value)
+    
+    combined_df$Adjusted.P.value <- NULL
+    combined_df$Old.Adjusted.P.value <- NULL
+    
+    # Display the combined data frame
+    datatable(combined_df)
+}
+
+showPathways(row.names(combined_results))
+```
+
+
+
+## Nasal VS LPS Stimulated - Combined DEGs (DeSeq)
+
+```{r combined_results_2}
+common_genes <- intersect(row.names(nasal_deseq), row.names(lps_deseq))
+
+combined_results <- data.frame(gene = common_genes) %>%
+    mutate(
+        nasal_padj = nasal_deseq[common_genes,]$padj,
+        lps_padj = lps_deseq[common_genes,]$padj,
+        combined_chisq = -2*(log(nasal_padj) + log(lps_padj)),
+        nasal_effect = nasal_deseq[common_genes,]$log2FoldChange,
+        lps_effect = lps_deseq[common_genes,]$log2FoldChange,
+    ) %>% 
+    transmute(
+        gene = gene, nasal_padj = nasal_padj, lps_padj = lps_padj,
+        combined_p = 1 - pchisq(combined_chisq, 4),
+        nasal_effect = ifelse(nasal_effect > 0, "Upregulated", "Downregulated"),
+        lps_effect = ifelse(lps_effect > 0, "Upregulated", "Downregulated"),
+        reg_agreement = ifelse(lps_effect == nasal_effect, "Same", "Opposite"),
+    ) %>% 
+    mutate(across(where(is.character), as.factor))%>% 
+    filter(
+        !is.na(combined_p),
+        nasal_padj < significance_threshold,
+        lps_padj < significance_threshold,
+    ) %>%
+    arrange(combined_p) %>% 
+    slice_head(n = 250)
+
+row.names(combined_results) <- combined_results$gene
+combined_results$gene <- NULL
+combined_results$nasal_padj <- NULL
+combined_results$lps_padj <- NULL
+
+datatable(combined_results)
+```
+
+## Nasal VS LPS Stimulated - Combined Pathways
+```{r}
+showPathways(row.names(combined_results))
+```
+
+# Update
+
+## Methods
+- We replicated this sort of analysis with Tuberculosis data provided by Dr Johnson
+    - Blood and Nasal groups.
+    
+- We compared the results from the Blood and Nasal groups using similar techniques.
+
+- We tried to compare the results to the previous analysis once more, but the DEG overlap was not significant enough to perform any meaningful analisys.
+
+
+<!-- TB pipeline -->
+```{r include=FALSE}
+# read in and format patient data for both blood and nasal samples
+meta_data <- read.csv("data/full_metadata.csv", row.names = 1)
+meta_data$sample_name_rnacounts_file <- toupper(meta_data$sample_name_rnacounts_file)
+meta_data$disease <- meta_data$status
+
+# read expression counts
+blood.counts.df <- read.csv("data/bloodcounts.csv", row.names = 1)
+nasal.counts.df <- read.csv("data/nasalcounts.csv", row.names = 1)
+
+# filter patient data without a match on expression count dataframes
+relevant.rows <- meta_data$sample_name_rnacounts_file %in% c(names(blood.counts.df), names(nasal.counts.df)) 
+meta_data <- meta_data[relevant.rows,]
+meta_data$status <- factor(meta_data$status,levels = c("control","case"))
+
+# split patient data into blood and nasal samples
+blood.meta_data <- meta_data[meta_data$type == "blood",]
+nasal.meta_data <- meta_data[meta_data$type == "nasal",]
+
+# identify patients that performed both trials
+samples_of_interest <- intersect(blood.meta_data$sample_id, nasal.meta_data$sample_id)
+
+# blood: filter for the patients that also participated in nasal sampling
+blood.mask <- blood.meta_data$sample_id %in% samples_of_interest
+blood.meta_data <- blood.meta_data[blood.mask,]
+columns <- blood.meta_data$sample_name_rnacounts_file
+blood.counts.df <- blood.counts.df[,columns]
+
+# nasal: filter for the patients that also participated in blood sampling
+nasal.mask <- nasal.meta_data$sample_id %in% samples_of_interest
+nasal.meta_data <- nasal.meta_data[nasal.mask,]
+columns <- nasal.meta_data$sample_name_rnacounts_file
+nasal.counts.df <- nasal.counts.df[,columns]
+
+
+# aggregate patient and expression data into a single object for each set of samples
+se.blood <- SummarizedExperiment(assays=list(counts=blood.counts.df), colData=blood.meta_data)
+se.nasal <- SummarizedExperiment(assays=list(counts=nasal.counts.df), colData=nasal.meta_data)
+
+# add log*cpm assays
+se.blood <- mkAssay(se.blood, log = TRUE, counts_to_CPM = TRUE)
+se.nasal <- mkAssay(se.nasal, log = TRUE, counts_to_CPM = TRUE)
+```
+
+```{r blood_vars, include=FALSE}
+counts <- assay(se.blood, "counts")
+meta_data <- colData(se.blood)
+disease <- meta_data$status
+group <- meta_data$status
+x <- meta_data$sample_id
+labels <- sapply(strsplit(x, "-"), function(parts) {
+  paste0(as.numeric(parts[2]), "-", as.numeric(parts[3]))
+})
+```
+
+```{r include=FALSE}
+# fit UMAP model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+umap.defaults$n_neighbors=5
+umap_out <- umap(t(assay(se.blood,"log_counts_cpm")), config=umap.defaults)
+
+# define dataframe with UMAP dimensions and IDC
+umap_plot <- as.data.frame(umap_out$layout) # X, Y, ...
+umap_plot$disease <- as.factor(disease) # color / group
+
+# plot UMAP1 and UMAP2 by IDC
+G1 <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=disease)) +
+  geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
+  geom_text(label=labels, nudge_y = 0.1,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("UMAP Plot - Blood Treatment")
+```
+
+```{r message=FALSE, include=FALSE, cache=TRUE}
+# format data into a DESeq2-friendly Data Structure
+dds <- DESeqDataSetFromMatrix(countData=counts, colData=meta_data, design=~disease)
+#colData is a data frame of demographic/phenotypic data
+
+# filter for genes with significant expression  
+# expression should be > 0, but > 100 should be better
+dds<-dds[rowSums(counts(dds))>1,] #Gene Filtering
+
+# fit negative binomial regression
+dds<-DESeq(dds) #Performs estimation of size factors, dispersion, and negative binomial GLM f#itting
+
+# extracting results, ordering them by adjusted p-value
+res <- results(dds)[order(results(dds)[,6]),]
+#res[1:10,]
+
+# display results for the top 1000 most significant genes
+datatable(data.frame(res[1:1000,]))
+
+# store the name of the top 250 most significant genes
+blood.deseq <- rownames(res)[1:250]
+blood.res <- data.frame(res)
+```
+
+```{r include=FALSE}
+# Make a Heatmap of DEGs
+
+# All together: extract the log cpm of the top 250 genes and store that in a matrix
+# # get the name of the genes ordered by adjusted p-val
+top_genes <- rownames(results(dds)[order(results(dds)$padj),])[1:250]
+# # convert log cpm to a matrix structure sorted by the top genes
+mat <- as.matrix(assay(se.blood,"log_counts_cpm"))[top_genes,] 
+
+# normalize data row-wise
+mat <- t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df <- data.frame(disease=colData(se.blood)$disease) 
+
+# create HeatMap with some annotations
+ha_colors <- list(disease=c("control"="Blue","case"="Red"))
+
+ha <- HeatmapAnnotation(df = df, col = ha_colors)
+HM1 <- Heatmap(mat,
+               name = "Log CPM",
+               show_row_names = F,
+               show_column_names = T,
+               row_dend_side = "left",
+               top_annotation = ha,
+               column_title = "Blood Samples",
+               heatmap_legend_param = list(direction = "horizontal", 
+                                           title_gp = gpar(fontsize = 8), 
+                                           labels_gp = gpar(fontsize = 8)))
+```
+
+```{r nasal_vars, include=FALSE}
+counts <- assay(se.nasal, "counts")
+meta_data <- colData(se.nasal)
+disease <- meta_data$status
+group <- meta_data$status
+x <- meta_data$sample_id
+labels <- sapply(strsplit(x, "-"), function(parts) {
+  paste0(as.numeric(parts[2]), "-", as.numeric(parts[3]))
+})
+```
+
+```{r include=FALSE}
+# fit UMAP model to log cpm data
+# note: transpose data to make it tidy
+set.seed(1)
+umap.defaults$n_neighbors=5
+umap_out <- umap(t(assay(se.nasal,"log_counts_cpm")), config=umap.defaults)
+
+# define dataframe with UMAP dimensions and IDC
+umap_plot <- as.data.frame(umap_out$layout) # X, Y, ...
+umap_plot$disease <- as.factor(se.nasal$disease) # color / group
+
+# plot UMAP1 and UMAP2 by IDC
+G2 <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=disease)) +
+  geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
+  geom_text(label=labels, nudge_y = 0.1,) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ggtitle("UMAP Plot - Nasal Treatment")
+```
+
+## Data Visualization
+```{r UMAPS}
+combined_plot <- G1 + G2 + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+
+plot(combined_plot)
+```
+
+```{r message=FALSE, include=FALSE, cache=TRUE}
+# format data into a DESeq2-friendly Data Structure
+dds <- DESeqDataSetFromMatrix(countData=counts, colData=meta_data, design=~disease)
+#colData is a data frame of demographic/phenotypic data
+
+# filter for genes with significant expression  
+# expression should be > 0, but > 100 should be better
+dds<-dds[rowSums(counts(dds))>1,] #Gene Filtering
+
+# fit negative binomial regression
+dds<-DESeq(dds) #Performs estimation of size factors, dispersion, and negative binomial GLM f#itting
+
+# extracting results, ordering them by adjusted p-value
+res <- results(dds)[order(results(dds)[,6]),]
+#res[1:10,]
+
+# display results for the top 1000 most significant genes
+datatable(data.frame(res[1:1000,]))
+
+# store the name of the top 250 most significant genes
+nasal.deseq <- rownames(res)[1:250]
+nasal.res <- data.frame(res)
+```
+
+```{r}
+# Make a Heatmap of DEGs
+
+# All together: extract the log cpm of the top 250 genes and store that in a matrix
+# # get the name of the genes ordered by adjusted p-val
+top_genes = rownames(results(dds)[order(results(dds)$padj),])[1:250]
+# # convert log cpm to a matrix structure sorted by the top genes
+mat = as.matrix(assay(se.nasal,"log_counts_cpm"))[top_genes,] 
+
+# normalize data row-wise
+mat = t(scale(t(mat)))
+
+# store IDC into a single-column dataframe
+df=data.frame(disease=colData(se.nasal)$disease) 
+
+ha = HeatmapAnnotation(df = df, col = ha_colors)
+HM2 = Heatmap(mat,
+               name = "Log CPM",
+               show_row_names = F,
+               show_column_names = T,
+               row_dend_side = "right",
+               top_annotation=ha,
+               column_title = "Nasal Samples",
+               heatmap_legend_param = list(direction = "horizontal", 
+                                           title_gp = gpar(fontsize = 8), 
+                                           labels_gp = gpar(fontsize = 8)))
+```
+
+## Combined DEGs (DeSeq)
+```{r deseq_Heatmaps}
+h1 <- grid.grabExpr(draw(HM1,
+                         heatmap_legend_side = "bottom",
+                         annotation_legend_side = "bottom"))
+
+h2 <- grid.grabExpr(draw(HM2,
+                         heatmap_legend_side = "bottom",
+                         annotation_legend_side = "bottom"))
+
+# Arrange them separately
+grid.arrange(h1, h2, ncol = 2)
+```
+
+## Blood Genes
+```{r}
+#top 1000 list used, pared to 250
+
+ctrl_results <- data.frame(gene = blood.deseq) %>%
+    mutate(
+        ctrl_padj = blood.res[blood.deseq,]$padj,
+        ctrl_effect = blood.res[blood.deseq,]$log2FoldChange
+    ) %>% 
+    mutate(
+        ctrl_effect = ifelse(ctrl_effect > 0, "Upregulated", "Downregulated")
+    ) %>% 
+    mutate(across(where(is.character), as.factor)) %>% 
+    arrange(ctrl_padj) %>% 
+    slice_head(n = 250)
+
+row.names(ctrl_results) <- ctrl_results$gene
+ctrl_results$gene <- NULL
+
+datatable(ctrl_results)
+```
+
+## Blood Pathways
+
+```{r}
+showPathways(blood.deseq)
+```
+
+
+## Nasal Genes
+
+```{r}
+#top 1000 list used, pared to 250
+
+ctrl_results <- data.frame(gene = nasal.deseq) %>%
+    mutate(
+        ctrl_padj = nasal.res[nasal.deseq,]$padj,
+        ctrl_effect = nasal.res[nasal.deseq,]$log2FoldChange
+    ) %>% 
+    mutate(
+        ctrl_effect = ifelse(ctrl_effect > 0, "Upregulated", "Downregulated")
+    ) %>% 
+    mutate(across(where(is.character), as.factor)) %>% 
+    arrange(ctrl_padj) %>% 
+    slice_head(n = 250)
+
+row.names(ctrl_results) <- ctrl_results$gene
+ctrl_results$gene <- NULL
+
+datatable(ctrl_results)
+```
+
+## Nasal Patheays
+```{r}
+showPathways(nasal.deseq)
+```
+
+
+## Tuberculosis: Blood VS Nasal - Combined DEGs (DeSeq)
+```{r}
+common_genes <- intersect(blood.deseq, nasal.deseq)
+significance_threshold <- 0.3
+
+combined_results <- data.frame(gene = common_genes) %>%
+    mutate(
+        blood.padj = blood.res[common_genes,]$padj,
+        nasal.padj = nasal.res[common_genes,]$padj,
+        combined_chisq = -2*(log(blood.padj) + log(nasal.padj)),
+        blood.effect = blood.res[common_genes,]$log2FoldChange,
+        nasal.effect = nasal.res[common_genes,]$log2FoldChange,
+    ) %>% 
+    transmute(
+        gene = gene, blood.padj = blood.padj, nasal.padj = nasal.padj,
+        combined_p = 1 - pchisq(combined_chisq, 4),
+        blood.effect = ifelse(blood.effect > 0, "Upregulated", "Downregulated"),
+        nasal.effect = ifelse(nasal.effect > 0, "Upregulated", "Downregulated"),
+        reg_agreement = ifelse(blood.effect == nasal.effect, "Same", "Opposite"),
+    ) %>% 
+    mutate(across(where(is.character), as.factor))%>% 
+    filter(
+        !is.na(combined_p),
+        blood.padj < significance_threshold,
+        nasal.padj < significance_threshold,
+    ) %>%
+    arrange(combined_p) %>% 
+    slice_head(n = 250)
+
+row.names(combined_results) <- combined_results$gene
+combined_results$gene <- NULL
+combined_results$nasal_padj <- NULL
+combined_results$ctrl_padj <- NULL
+
+
+datatable(combined_results)
+```
+
+## Nasal VS LPS Stimulated - Combined Pathways
+
+```{r}
+showPathways(row.names(combined_results))
+```
+
+# Discussion
+
+## Insights
+
+## What next?
