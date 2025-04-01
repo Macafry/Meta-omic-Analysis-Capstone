@@ -35,6 +35,7 @@ library(biomaRt)
 library(rprojroot)
 library(fs)
 library(dplyr)
+library(comprehenr)
 
 # define pathway libraries
 dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
@@ -684,6 +685,228 @@ output_path <- fs::path(project_root,
                          "TB_results_top250.csv")
 # write .csv file into Deliverable 5 folder
 write_csv(x=tb_results_df, file=output_path)
-
 ```
+
+### Permutation Tests
+
+#### Using the whole dataset {.tabset}
+
+
+##### Assuming independent regulation
+```{r permutation_test, collapse=TRUE}
+# simulation parameters
+N <- 10000
+empirical_agreement <- mean(combined_results$reg_agreement == "Same")
+
+blood.effect <- ifelse(blood.res$log2FoldChange > 0, "Up Regulated", "Down Regulated")
+nasal.effect <- ifelse(nasal.res$log2FoldChange > 0, "Up Regulated", "Down Regulated")
+
+blood.dist <- table(blood.effect)
+nasal.dist <- table(nasal.effect)
+
+blood.sampler <- \(n) sample(names(blood.dist), size=n, replace=TRUE, prob=blood.dist)
+nasal.sampler <- \(n) sample(names(nasal.dist), size=n, replace=TRUE, prob=nasal.dist)
+
+blood.genes <- row.names(blood.res)
+nasal.genes <- row.names(blood.res)
+
+common.genes <- intersect(blood.genes, nasal.genes)
+common.count <- length(common.genes)
+
+permutations <- to_vec(for(i in 1:N){
+    
+    # extract the regulation direction for the most significant genes
+    blood.effect <- blood.sampler(common.count)
+    nasal.effect <- nasal.sampler(common.count)
+    
+    # get an agreement coefficient (# agreed / total)
+    mean(blood.effect == nasal.effect)
+})
+
+# display p-val and counts
+mean(permutations  < empirical_agreement)
+table(permutations  < empirical_agreement)
+hist(permutations)
+median(permutations)
+```
+
+##### Assuming dependent regulation
+```{r collapse=TRUE}
+joint.res <- merge(blood.res, nasal.res, by.x = 0, by.y = 0)
+joint.effect <- ifelse(joint.res[c("log2FoldChange.x", "log2FoldChange.y")] > 0, "Up Regulated", "Down Regulated")
+
+joint.dist <- as.data.frame(table(joint.effect[,1], joint.effect[,2]))
+joint.sampler <-  \(n) joint.dist[sample(1:nrow(joint.dist), size=n, replace=TRUE, prob=joint.dist$Freq), ]
+
+permutations <- to_vec(for(i in 1:N){
+    
+    # extract the regulation direction for the most significant genes
+    joint.effect <- joint.sampler(common.count)
+    blood.effect <- joint.effect$Var1
+    nasal.effect <- joint.effect$Var2
+    
+    # get an agreement coefficient (# agreed / total)
+    mean(blood.effect == nasal.effect)
+})
+
+# display p-val and counts
+mean(permutations  < empirical_agreement)
+table(permutations  < empirical_agreement)
+hist(permutations)
+median(permutations)
+```
+
+#### Selecting the top 250 genes {.tabset}
+
+##### Assuming independent regulation
+```{r collapse=TRUE}
+N <- 2000
+permutations <- to_vec(for(i in 1:N){
+    
+    blood.shuffle <- data.frame(
+        padj = blood.res$padj,
+        effect = blood.sampler(nrow(blood.res))
+    )
+    
+    nasal.shuffle <- data.frame(
+        padj = nasal.res$padj,
+        effect = nasal.sampler(nrow(nasal.res))
+    )
+        
+    row.names(blood.shuffle) <- sample(row.names(blood.res), nrow(blood.res))
+    row.names(nasal.shuffle) <- sample(row.names(nasal.res), nrow(nasal.res))
+    
+    # extract the top 250 genes for each experiment
+    blood.250 <- row.names(head(arrange(blood.shuffle, padj), 250))
+    nasal.250 <- row.names(head(arrange(nasal.shuffle, padj), 250))
+    
+    # identify genes significant in both experiments
+    common.genes <- intersect(blood.250, nasal.250)
+   
+    # extract the regulation direction for the most significant genes
+    blood.effect <- blood.shuffle[common.genes,]$effect
+    nasal.effect <- nasal.shuffle[common.genes,]$effect
+    
+    # get an agreement coefficient (# agreed / total)
+    if (sum(blood.effect == nasal.effect) == 0) {
+        agreement <- 1
+    } else {
+        agreement <- mean(blood.effect == nasal.effect)
+    }
+})
+
+# display p-val and counts
+mean(permutations  < empirical_agreement)
+table(permutations  < empirical_agreement)
+hist(permutations)
+median(permutations)
+```
+
+##### Assuming dependent regulation
+```{r collapse=TRUE}
+blood.genes <- row.names(blood.res)
+nasal.genes <- row.names(blood.res)
+
+common.genes.static <- intersect(blood.genes, nasal.genes)
+common.count <- length(common.genes.static)
+
+blood.res.common <- blood.res[common.genes,]
+nasal.res.common <- nasal.res[common.genes,]
+
+
+permutations <- to_vec(for(i in 1:N){
+    
+    joint.effect <- joint.sampler(common.count)
+    
+    blood.shuffle <- data.frame(
+        padj = blood.res.common$padj,
+        effect = joint.effect$Var1
+    )
+    
+    nasal.shuffle <- data.frame(
+        padj = nasal.res.common$padj,
+        effect = joint.effect$Var2
+    )
+        
+    row.names(blood.shuffle) <- sample(common.genes.static, common.count)
+    row.names(nasal.shuffle) <- sample(common.genes.static, common.count)
+    
+    # extract the top 250 genes for each experiment
+    blood.250 <- row.names(head(arrange(blood.shuffle, padj), 250))
+    nasal.250 <- row.names(head(arrange(nasal.shuffle, padj), 250))
+    
+    # identify genes significant in both experiments
+    common.genes <- intersect(blood.250, nasal.250)
+   
+    # extract the regulation direction for the most significant genes
+    blood.effect <- blood.shuffle[common.genes,]$effect
+    nasal.effect <- nasal.shuffle[common.genes,]$effect
+    
+    # get an agreement coefficient (# agreed / total)
+    if (sum(blood.effect == nasal.effect) == 0) {
+        agreement <- 1
+    } else {
+        agreement <- mean(blood.effect == nasal.effect)
+    }
+    
+})
+
+# display p-val and counts
+mean(permutations  < empirical_agreement)
+table(permutations  < empirical_agreement)
+hist(permutations)
+median(permutations)
+```
+
+
+##### Assuming dependent regulation and regulation tied to p-value
+```{r collapse=TRUE}
+
+# auxiliary dataframes
+blood.shuffle <- data.frame(
+    padj = blood.res$padj,                
+    effect = ifelse(blood.res$log2FoldChange > 0, "Up Regulated", "Down Regulated")
+)
+
+nasal.shuffle <- data.frame(
+    padj = nasal.res$padj,                
+    effect = ifelse(nasal.res$log2FoldChange > 0, "Up Regulated", "Down Regulated")
+)
+   
+permutations <- to_vec(for(i in 1:N){
+   
+    # shuffle gene names
+    row.names(blood.shuffle) <- sample(row.names(blood.res), nrow(blood.res))
+    row.names(nasal.shuffle) <- sample(row.names(nasal.res), nrow(nasal.res))
+   
+    # extract the top 250 genes for each experiment
+    blood.250 <- row.names(head(arrange(blood.shuffle, padj), 250))
+    nasal.250 <- row.names(head(arrange(nasal.shuffle, padj), 250))
+   
+    # identify genes significant in both experiments
+    common.genes <- intersect(blood.250, nasal.250)
+   
+    # extract the regulation direction for the most significant genes
+    blood.effect <- blood.shuffle[common.genes,]$effect
+    nasal.effect <- nasal.shuffle[common.genes,]$effect
+   
+    # get an agreement coefficient (# agreed / total)
+    if (sum(blood.effect == nasal.effect) == 0) {
+        agreement <- 1
+    } else {
+        agreement <- mean(blood.effect == nasal.effect)
+    }
+   
+    # report if agreement coefficient is more extreme
+    agreement
+   
+})
+
+# display p-val and counts
+mean(permutations  < empirical_agreement)
+table(permutations  < empirical_agreement)
+hist(permutations)
+median(permutations)
+``` 
+
 
