@@ -1,0 +1,279 @@
+---
+title: "Comparative Results Analysis of Immune Deficiency RNA-Seq Data"
+author: Ian Mc Farlane, Bram Stults advised by W. Evan Johnson, Ph.D.
+date: "`r Sys.Date()`"
+header-includes:
+   - \usepackage{amsmath}
+output:
+  html_document:
+    code_folding: show
+    toc: true
+    toc_float: true
+    theme: "flatly"
+editor_options: 
+  chunk_output_type: console
+tables: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#load packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(here,
+               tidyverse,
+               janitor,
+               scales,
+               ggrepel)
+library(readr)
+
+```
+
+### Load top 250 DEGs per sample/group
+
+```{r}
+# WD set to /Deliverable 3/data directory
+# setwd("~/Documents/.../Meta-omic-Analysis-Capstone/Deliverable 6")
+
+top.results.1.df <- read_csv("data/Nasopharynx_CVID_top250_results.csv")
+nasophar.deseq <- top.results.1.df$deseq250
+nasophar.limma <- top.results.1.df$limma250
+
+#complete list of nasopharyngeal sample results
+all.nasophar.res <- read_csv("data/Nasopharynx_CVID_all_results.csv")
+names(all.nasophar.res)[names(all.nasophar.res) == "...1"] <- "genes"
+
+top.results.2.df <- read_csv("data/PBMC_CVID_top250_results.csv")
+ctrl.deseq <- top.results.2.df$ctrl_deseq
+ctrl.limma <- top.results.2.df$ctrl_limma
+LPS.deseq <- top.results.2.df$LPS_deseq
+LPS.limma <- top.results.2.df$LPS_limma
+
+#complete list of unstimulated PBMC sample results
+all.pbmc.res <- read_csv("data/PBMC_CVID_all_results.csv")
+names(all.pbmc.res)[names(all.pbmc.res) == "...1"] <- "genes"
+
+```
+
+
+## Comparison {.tabset}
+
+## Nasopharyngeal and Healthy Control PBMC {.tabset}
+
+### Common Significant genes:
+
+```{r}
+
+(common.deseq <- intersect(nasophar.deseq, ctrl.deseq)) 
+(common.limma <- intersect(nasophar.limma, ctrl.limma))
+
+```
+
+### Significant genes for nasopharyngeal mucusal samples only
+
+```{r}
+setdiff(nasophar.deseq, common.deseq)
+setdiff(nasophar.limma, common.limma)
+```
+
+### Significant genes for Control group only
+
+```{r}
+setdiff(ctrl.deseq, common.deseq)
+setdiff(ctrl.limma, common.limma)
+```
+
+### Similarity Coefficients for Nasopharyngeal v. PBMC DESeq2 analysis
+
+```{r}
+
+print("DESeq similarity coefficient for Nasopharyngeal v. PBMC samples")
+length(common.deseq) / length(union(nasophar.deseq, ctrl.deseq))
+
+#storing DESeq2 coefficient for Monte Carlo verification
+jacc.index <- length(common.deseq) / length(union(nasophar.deseq, ctrl.deseq))
+
+print("LIMMA similarity coefficient for Nasopharyngeal v. PBMC samples")
+length(common.limma) / length(union(nasophar.limma, ctrl.limma))
+
+```
+
+## Combined DEGs (DeSeq)
+```{r}
+nasal.res <- nasophar.deseq
+blood.res <- ctrl.deseq
+
+common_genes <- common.deseq
+significance_threshold <- 0.3
+
+combined_results <- data.frame(gene = common_genes) %>%
+    mutate(
+        blood.padj = blood.res[common_genes,]$padj,
+        nasal.padj = nasal.res[common_genes,]$padj,
+        combined_chisq = -2*(log(blood.padj) + log(nasal.padj)),
+        blood.effect = blood.res[common_genes,]$log2FoldChange,
+        nasal.effect = nasal.res[common_genes,]$log2FoldChange,
+    ) %>% 
+    transmute(
+        gene = gene, blood.padj = blood.padj, nasal.padj = nasal.padj,
+        combined_p = 1 - pchisq(combined_chisq, 4),
+        blood.effect = ifelse(blood.effect > 0, "Upregulated", "Downregulated"),
+        nasal.effect = ifelse(nasal.effect > 0, "Upregulated", "Downregulated"),
+        reg_agreement = ifelse(blood.effect == nasal.effect, "Same", "Opposite"),
+    ) %>% 
+    mutate(across(where(is.character), as.factor))%>% 
+    filter(
+        !is.na(combined_p),
+        blood.padj < significance_threshold,
+        nasal.padj < significance_threshold,
+    ) %>%
+    arrange(combined_p) %>% 
+    slice_head(n = 250)
+
+row.names(combined_results) <- combined_results$gene
+combined_results$gene <- NULL
+combined_results$nasal_padj <- NULL
+combined_results$ctrl_padj <- NULL
+
+
+datatable(combined_results)
+```
+
+
+## Monte Carlo Simulation of Jaccard Index
+
+```{r}
+
+# function for commonality coefficient 
+commonality.coefficient <- function(sample1, sample2) {
+  intersection <- intersect(sample1$genes, sample2$genes)
+  union <- union(sample1$genes, sample2$genes)
+  return(length(intersection) / length(union))
+}
+
+# number of simulations
+num.sims <- 100000
+
+# number of genes to sample
+sample.size <- 250
+
+# result vector
+common.coeffs <- numeric(num.sims)
+
+# Loop
+for (i in 1:num.sims) {
+  
+  # randomly selecting 250 row indices from `all.pbmc.res` (complete results)
+  blood.indices <- sample(nrow(all.pbmc.res), 
+                          size = sample.size, 
+                          replace = F) 
+  blood.sample <- all.pbmc.res[blood.indices, ]
+  
+  # randomly selecting 250 row indices from `all.nasophar.res` (complete results)
+  nasophar.indices <- sample(nrow(all.nasophar.res), 
+                      size = sample.size, 
+                      replace = F)  
+  nasophar.sample <- all.nasophar.res[nasophar.indices, ]
+
+  # calculating and storing commonality coefficient for samples
+  coefficient <- commonality.coefficient(blood.sample, nasophar.sample)
+  common.coeffs[i] <- coefficient
+}
+
+mean.commonality <- mean(common.coeffs)
+sd.commonality <- sd(common.coeffs)
+
+cat("Mean Commonality Coefficient:", mean.commonality, "\n")
+cat("Standard deviation:", sd.commonality, "\n")
+
+hist(common.coeffs, 
+     main = "Distribution of Commonality Coefficients", 
+     xlab = "Commonality Coefficient")
+
+#Probability of obtaining Jaccard index greater than obtained DESeq2 coefficient
+mean(common.coeffs >= jacc.index) #mean of True/False logical vector T/F --> 1/0
+
+
+
+```
+If the 250 genes in each list were completely random, there is a 2.988% chance that the resulting commonality coefficients of those lists would be as large as or larger than 0.008064516 obtained here.
+
+
+## Volcano Plot - PBMC
+```{r}
+
+all.pbmc.res <- all.pbmc.res |>
+  mutate(gene_type=case_when(log2FoldChange >= 2 & padj <= 0.05 ~"up",
+                             log2FoldChange <= 0.5 & padj <= 0.05 ~"down",
+                             TRUE ~ "ns" ))
+all.pbmc.res |> 
+  count(gene_type)
+
+all.pbmc.res |>
+  distinct(gene_type) |> 
+  pull()
+
+cols <- c("up"="slategray2", "down"="orange2", "ns"="grey50")
+sizes <- c("up"=2, "down"=2, "ns"=1)
+alphas <- c("up"=1, "down"=1, "ns"=0.5)
+
+all.pbmc.res |> 
+  ggplot(aes(x=log2FoldChange,
+             y=-log10(padj),
+             fill=gene_type,
+             size=gene_type,
+             alpha=gene_type)) +
+  geom_point(shape=21,
+             color="black") +
+  geom_vline(xintercept=c(log2(0.5), log2(2)),
+          linetype="dashed")+
+  geom_hline(yintercept=-log10(0.05),
+             linetype="dashed")+
+  scale_fill_manual(values=cols)+
+  scale_size_manual(values=sizes)+
+  scale_alpha_manual(values=alphas)+
+  scale_x_continuous(breaks=c(seq(-10,10,2)),
+                     limits=c(-10,10)
+                     )
+  
+```
+
+
+## Volcano Plot - Nasopharynx
+```{r}
+
+all.nasophar.res <- all.nasophar.res |>
+  mutate(gene_type=case_when(log2FoldChange >= 2 & padj <= 0.05 ~"up",
+                             log2FoldChange <= 0.5 & padj <= 0.05 ~"down",
+                             TRUE ~ "ns" ))
+all.nasophar.res |> 
+  count(gene_type)
+
+all.nasophar.res |>
+  distinct(gene_type) |> 
+  pull()
+
+cols <- c("up"="slategray2", "down"="orange2", "ns"="grey50")
+sizes <- c("up"=2, "down"=2, "ns"=1)
+alphas <- c("up"=1, "down"=1, "ns"=0.5)
+
+all.nasophar.res |> 
+  ggplot(aes(x=log2FoldChange,
+             y=-log10(padj),
+             fill=gene_type,
+             size=gene_type,
+             alpha=gene_type)) +
+  geom_point(shape=21,
+             color="black") +
+  geom_vline(xintercept=c(log2(0.5), log2(2)),
+          linetype="dashed")+
+  geom_hline(yintercept=-log10(0.05),
+             linetype="dashed")+
+  scale_fill_manual(values=cols)+
+  scale_size_manual(values=sizes)+
+  scale_alpha_manual(values=alphas)+
+  scale_x_continuous(breaks=c(seq(-10,10,2)),
+                     limits=c(-10,10)
+                     )
+
+  
+```

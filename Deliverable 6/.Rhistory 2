@@ -1,0 +1,48 @@
+# read RNA expression counts
+counts <- read.table("features_combined.txt", sep="\t",
+header=T, row.names=1)
+# read patient data
+meta_data <- read.table("meta_data.txt", sep="\t",
+header=T, row.names=1)
+# isolate group indicator variable
+group <- meta_data$Condition
+# aggregate patient and expression data into a single object
+se_immunedef <- SummarizedExperiment(assays=list(counts=counts),
+colData = meta_data)
+knitr::opts_chunk$set(echo = TRUE)
+# load required libraries
+library(Rsubread)
+library(Rsamtools)
+library(SummarizedExperiment)
+library(edgeR)
+library(DESeq2)
+library(ComplexHeatmap)
+library(TBSignatureProfiler)
+library(umap)
+library(tidyverse)
+library(DT)
+library(GSVA)
+library(enrichR)
+library(rprojroot)
+library(fs)
+# define pathway libraries
+dbs <- c("WikiPathways_2016","KEGG_2016","Panther_2016","Reactome_2016")
+# read RNA expression counts
+counts <- read.table("features_combined.txt", sep="\t",
+header=T, row.names=1)
+# read patient data
+meta_data <- read.table("meta_data.txt", sep="\t",
+header=T, row.names=1)
+# isolate group indicator variable
+group <- meta_data$Condition
+# aggregate patient and expression data into a single object
+se_immunedef <- SummarizedExperiment(assays=list(counts=counts),
+colData = meta_data)
+# create counts per million, log counts and log counts per million features
+# and save them into new assays.
+se_immunedef <- mkAssay(se_immunedef, log = TRUE, counts_to_CPM = TRUE)
+# display all assays
+assays(se_immunedef)
+group
+meta_data
+?umap()
