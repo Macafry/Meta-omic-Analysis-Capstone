@@ -21,9 +21,11 @@ knitr::opts_chunk$set(echo = TRUE)
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(here,
                tidyverse,
+               magrittr,
                janitor,
                scales,
-               ggrepel)
+               ggrepel,
+               DT)
 library(readr)
 
 ```
@@ -99,45 +101,92 @@ length(common.limma) / length(union(nasophar.limma, ctrl.limma))
 
 ## Combined DEGs (DeSeq)
 ```{r}
-nasal.res <- nasophar.deseq
-blood.res <- ctrl.deseq
+nasal.res <- all.nasophar.res
+blood.res <- all.pbmc.res
 
-common_genes <- common.deseq
-significance_threshold <- 0.3
+common_genes <- intersect(nasal.res$genes,blood.res$genes)
+significance.threshold <- 0.2
 
-combined_results <- data.frame(gene = common_genes) %>%
+merged.res <- tibble(genes = common_genes) %>% 
+    merge(nasal.res, by="genes") %>% 
+    merge(blood.res, by="genes", suffixes=c(".nasal", ".blood"))
+
+if ( nrow(merged.res) != length(common_genes) ) {
+    stop(paste(
+        "There was an error when merging the datasets.", 
+        "The number of rows (", nrow(merged.res), ")",
+        "doesn't match with the number of common genes",
+        "(", length(common_genes), ")."
+    ))
+}
+
+######## 
+# NOTE: once the baseline of PBMC gets fixed, change < to > in blood.regulation
+######## 
+
+merged.res <- merged.res %>% 
     mutate(
-        blood.padj = blood.res[common_genes,]$padj,
-        nasal.padj = nasal.res[common_genes,]$padj,
-        combined_chisq = -2*(log(blood.padj) + log(nasal.padj)),
-        blood.effect = blood.res[common_genes,]$log2FoldChange,
-        nasal.effect = nasal.res[common_genes,]$log2FoldChange,
+        blood.padj = padj.blood, 
+        nasal.padj = padj.nasal,
+        combined.chisq = -2*(log(blood.padj) + log(nasal.padj)),
+        combined.p = 1 - pchisq(combined.chisq, 4),
+        blood.regulation = ifelse(log2FoldChange.blood < 0, "Upregulated", "Downregulated"),
+        nasal.regulation = ifelse(log2FoldChange.nasal > 0, "Upregulated", "Downregulated"),
+        regulation.agreement = ifelse(blood.regulation == nasal.regulation, "Same", "Opposite")
     ) %>% 
-    transmute(
-        gene = gene, blood.padj = blood.padj, nasal.padj = nasal.padj,
-        combined_p = 1 - pchisq(combined_chisq, 4),
-        blood.effect = ifelse(blood.effect > 0, "Upregulated", "Downregulated"),
-        nasal.effect = ifelse(nasal.effect > 0, "Upregulated", "Downregulated"),
-        reg_agreement = ifelse(blood.effect == nasal.effect, "Same", "Opposite"),
-    ) %>% 
-    mutate(across(where(is.character), as.factor))%>% 
-    filter(
-        !is.na(combined_p),
-        blood.padj < significance_threshold,
-        nasal.padj < significance_threshold,
+    mutate(across(where(is.character), as.factor)) %>% 
+    filter(!is.na(combined.p)) %>%
+    arrange(combined.p)
+
+any.sig.res <- merged.res %>% 
+    mutate(blood.padj = padj.blood, nasal.padj = padj.nasal) %>%
+    dplyr::select(
+        genes, combined.p, blood.padj, nasal.padj,
+        blood.regulation, nasal.regulation, regulation.agreement
     ) %>%
-    arrange(combined_p) %>% 
     slice_head(n = 250)
 
-row.names(combined_results) <- combined_results$gene
-combined_results$gene <- NULL
-combined_results$nasal_padj <- NULL
-combined_results$ctrl_padj <- NULL
+mutual.sig.res <- merged.res %>% 
+    mutate(blood.padj = padj.blood, nasal.padj = padj.nasal) %>%
+    dplyr::select(
+        genes, combined.p, blood.padj, nasal.padj,
+        blood.regulation, nasal.regulation, regulation.agreement
+    ) %>%
+    filter(blood.padj < significance.threshold, nasal.padj < significance.threshold)
 
 
-datatable(combined_results)
+datatable(mutual.sig.res)
 ```
 
+## Agreement of regulation
+
+### Between mutually significant genes
+```{r}
+mean(mutual.sig.res$regulation.agreement == "Same")
+```
+
+### Between Fischer-significant genes
+```{r}
+mean(any.sig.res$regulation.agreement == "Same")
+```
+
+## Contingency tables of of regulation directions
+
+### Between mutually significant genes
+```{r}
+(mutual.contingency <- table(dplyr::select(mutual.sig.res, blood.regulation, nasal.regulation)))
+
+chisq.test(mutual.contingency)
+fisher.test(mutual.contingency)
+```
+
+### Between Fischer-significant genes
+```{r}
+(any.contingency <- table(dplyr::select(any.sig.res, blood.regulation, nasal.regulation)))
+
+chisq.test(any.contingency)
+fisher.test(any.contingency)
+```
 
 ## Monte Carlo Simulation of Jaccard Index
 
@@ -277,3 +326,20 @@ all.nasophar.res |>
 
   
 ```
+
+## LogFoldChange - Nasopharynx &  LogFoldChange - Nasopharynx - PBMC
+```{r}
+merged.res %>%
+    slice_head(n = 250)%>%
+    ggplot(aes(x=log2FoldChange.blood,
+             y=log2FoldChange.nasal)) +
+  geom_point(shape=21,
+             fill="black")+
+  scale_x_continuous(breaks=c(seq(-6,6,2)),
+                     limits=c(-6,6)
+                     )+
+  scale_y_continuous(breaks=c(seq(-6,6,2)),
+                     limits=c(-6,6)
+                     )
+```
+

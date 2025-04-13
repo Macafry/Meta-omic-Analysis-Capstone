@@ -1,5 +1,5 @@
 ---
-title: "Integrative Analysis of\nCommon Variable Immunodeficiency (CVID)"
+title: "Integrative Analysis of\nCommon Variable Immunodeficiency v2 (CVID)"
 author: "Ian Mc Farlane, Bram Stults, advised by W. Evan Johnson, Ph.D."
 date: "`r Sys.Date()`"
 output: slidy_presentation
