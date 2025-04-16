@@ -64,8 +64,8 @@ remove_NCVID_index <- which(groups == "NCVID")
 
 # update group label vector and ensure Healthy is the base level
 groups <- groups[groups != "NCVID"] 
-groups[groups == "healthy"] = "Healthy"
-groups = factor(groups, levels=c("Healthy", "Deficient"))
+groups[groups == "healthy"] = "Control"
+groups = factor(groups, levels=c("Control", "Deficient"))
 
 # check modified vector
 print(groups) 
@@ -567,7 +567,7 @@ mat = t(scale(t(mat)))
 df=data.frame(disease=colData(se_cvid_ctrl)$disease) 
 
 # create HeatMap with some annotations
-ha_colors <-  list(disease=c("Healthy"="Blue","Deficient"="Red"))
+ha_colors <-  list(disease=c("Control"="Blue","Deficient"="Red"))
 
 ha <- HeatmapAnnotation(df = df, col = ha_colors)
 ht <- Heatmap(mat, show_row_names = FALSE, show_column_names = FALSE, 
