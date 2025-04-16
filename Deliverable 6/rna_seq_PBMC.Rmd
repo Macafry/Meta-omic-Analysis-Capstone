@@ -52,7 +52,7 @@ if (!file.exists("translated_genes.txt")) {
 }
 
 
-mt.counts.df <- read.csv("translated_genes.txt", row.names = 1)
+mt.counts.df <- read.csv("data/translated_genes.txt", row.names = 1)
 groups <- sample.info$disease 
 
 groups <- ifelse(groups %in% c("UCVID", "CVID"), 
@@ -62,9 +62,10 @@ groups <- ifelse(groups %in% c("UCVID", "CVID"),
 # store index of NCVID subjects
 remove_NCVID_index <- which(groups == "NCVID")
 
-# update group label vector
+# update group label vector and ensure Healthy is the base level
 groups <- groups[groups != "NCVID"] 
-groups <- factor(groups)
+groups[groups == "healthy"] = "Healthy"
+groups = factor(groups, levels=c("Healthy", "Deficient"))
 
 # check modified vector
 print(groups) 
@@ -566,7 +567,7 @@ mat = t(scale(t(mat)))
 df=data.frame(disease=colData(se_cvid_ctrl)$disease) 
 
 # create HeatMap with some annotations
-ha_colors <-  list(disease=c("healthy"="Blue","Deficient"="Red"))
+ha_colors <-  list(disease=c("Healthy"="Blue","Deficient"="Red"))
 
 ha <- HeatmapAnnotation(df = df, col = ha_colors)
 ht <- Heatmap(mat, show_row_names = FALSE, show_column_names = FALSE, 
@@ -576,11 +577,13 @@ width_pixels <- 8 * 600
 height_pixels <- 6 * 600
 
 # save 600 DPI JPEG
-jpeg("heatmap_pbmc_unstim_600dpi.jpeg", width = width_pixels, height = height_pixels, res = 600)
+png("heatmap_pbmc_unstim_600dpi.png", 
+     width = width_pixels, 
+     height = height_pixels, 
+     res = 600)
+
 draw(ht)
 dev.off()
-
-
 ```
 
 #### Limma Analysis
