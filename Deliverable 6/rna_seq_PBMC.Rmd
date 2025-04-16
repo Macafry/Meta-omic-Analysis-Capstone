@@ -513,7 +513,9 @@ g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=disease)) +
   geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
   geom_text(label=colnames(se_cvid_ctrl), nudge_y = 0.1,) +
   theme(plot.title = element_text(hjust = 0.5)) +
-  ggtitle("UMAP Plot - Control group")
+  ggtitle("UMAP of PBMC Unstimulated Samples")
+
+#ggsave("umap_plot_pbmc_unstim_600dpi.jpeg", plot = g, width = 8, height = 6, units = "in", dpi = 600)
 
 plot(g)
 ```
@@ -564,10 +566,20 @@ mat = t(scale(t(mat)))
 df=data.frame(disease=colData(se_cvid_ctrl)$disease) 
 
 # create HeatMap with some annotations
-ha_colors = list(disease=c("healthy"="Blue","Deficient"="Red"))
+ha_colors <-  list(disease=c("healthy"="Blue","Deficient"="Red"))
 
-ha = HeatmapAnnotation(df = df, col = ha_colors)
-Heatmap(mat,show_row_names=F,show_column_names = F, top_annotation=ha)
+ha <- HeatmapAnnotation(df = df, col = ha_colors)
+ht <- Heatmap(mat, show_row_names = FALSE, show_column_names = FALSE, 
+              top_annotation = ha, name = "log2 Fold Change")
+
+width_pixels <- 8 * 600
+height_pixels <- 6 * 600
+
+# save 600 DPI JPEG
+jpeg("heatmap_pbmc_unstim_600dpi.jpeg", width = width_pixels, height = height_pixels, res = 600)
+draw(ht)
+dev.off()
+
 
 ```
 
