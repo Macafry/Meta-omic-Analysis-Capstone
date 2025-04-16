@@ -106,7 +106,9 @@ g <- umap_plot %>% ggplot(aes(x=V1, y=V2, color=Condition)) +
   geom_point(size=1.5) + xlab("UMAP1") + ylab("UMAP2") +
   geom_text(label=colnames(se_immunedef), nudge_y = 0.1,) +
   theme(plot.title = element_text(hjust = 0.5)) +
-  ggtitle("UMAP Plot")
+  ggtitle("UMAP of Nasopharyngeal Samples")
+
+#ggsave("umap_plot_nasopharyngeal_600dpi.jpeg", plot = g, width = 8, height = 6, units = "in", dpi = 600)
 
 plot(g)
 ```
@@ -154,11 +156,26 @@ mat = as.matrix(assay(se_immunedef,"log_counts_cpm"))[rownames(results(dds)[orde
 mat = t(scale(t(mat)))
 
 # store IDC into a single-column dataframe
-df=data.frame(Condition=colData(se_immunedef)$Condition) 
+df <- data.frame(Condition=colData(se_immunedef)$Condition) 
 
 # create HeatMap with some annotations
-ha = HeatmapAnnotation(df = df, col = list(Condition=c("Deficient"="Red","Control"="Blue")))
-Heatmap(mat,show_row_names=F,show_column_names = F, top_annotation = ha)
+ha_colors <- list(disease=c("Control"="Blue","Deficient"="Red"))
+
+ha <- HeatmapAnnotation(df = df, col = ha_colors)
+ht <- Heatmap(mat, show_row_names = FALSE, show_column_names = FALSE, 
+              top_annotation = ha, 
+              name = "log2 fold change")
+
+width_pixels <- 8 * 600
+height_pixels <- 6 * 600
+
+# output a 600 DPI JPEG
+jpeg("heatmap_nasopharyngeal_600dpi.jpeg", 
+     width = width_pixels, height = height_pixels, 
+     res = 600)
+
+draw(ht)
+dev.off()
 
 ```
 

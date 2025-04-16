@@ -188,7 +188,7 @@ chisq.test(any.contingency)
 fisher.test(any.contingency)
 ```
 
-## Monte Carlo Simulation of Jaccard Index
+## Monte Carlo Simulation of Jaccard Index - Result verification
 
 ```{r}
 
