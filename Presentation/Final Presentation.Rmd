@@ -1,0 +1,85 @@
+---
+title: "Final Presentation"
+author: "Ian Mc Farlane, Bram Stults"
+date: "2025-04-16"
+output: slidy_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Introduction
+
+Blah Blah Blah
+
+## Local and Global Impact
+How will the project affect the stake holder, society, or others?
+
+## Continuing Professional Development
+
+What topics outside of the curriculum did you need to complete the project?
+
+_More than 5 topics outside of the curriculum were discussed_
+
+- Jaccard Coefficient
+- **Permutation Tests** for analysis design validation
+- Bioinformatics pipelines for Differential Expression Analysis and Pathway Analysis _(Summarized Experiment, DESeq2, Limma, and enrichR Libraries)_
+- Introductory Immunology and Clinical Practices
+- Professional Journal Writing
+
+
+
+## Data Science Lifecycle
+
+1. Data acquisition and representativeness
+2. Data management
+3. Data preparation and integration
+4. Data analysis
+5. Model development and deployment
+6. Visualization and communication of the knowledge obtained from the data
+
+## 1. Data acquisition and representativeness
+
+Dr Johnson handed us 3 separate datasets:
+
+
+## Non-technical Discussion
+
+What legal, professional, ethical, security, and/or social issues needed to be addressed?
+_More than one of legal, professional, ethical, security, or social issues were discussed in depth_
+
+## Development Methodology
+What worked and what didn’t with respect to development methodology and teamwork?
+_Methodology AND teamwork were discussed with respect to what worked AND what did not._
+
+## Outside Classes
+
+What math and Data Science classes were used in the project?
+
+::: columns
+::: column
+**Math Courses**  
+
+- MATH 3700: General Statistical Knowledge
+- MATH 2170: Matrix Mastery and Introduction to Dimension Reduction
+- MATH 3150: Introduction to linear models and advanced statistics
+- MATH 3190: Advanced R and Rmd
+:::
+
+::: column
+**Support Courses**
+
+- ANLY 4100: Data Visualization
+- ANLY 4110: Advanced Data Visualization
+- CSCY 2400: Ethical Data Issues
+- CS 2420: Data Structures Basics
+- BIOL 3060: Genetics background
+:::
+:::
+
+
+## Conclusion
+
+## Thank you
+

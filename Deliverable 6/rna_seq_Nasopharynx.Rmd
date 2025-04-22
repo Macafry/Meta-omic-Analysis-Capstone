@@ -162,7 +162,9 @@ df <- data.frame(Condition=colData(se_immunedef)$Condition)
 ha_colors <- list(Condition=c("Control"="Blue","Deficient"="Red"))
 
 ha <- HeatmapAnnotation(df = df, col = ha_colors)
-ht <- Heatmap(mat, show_row_names = FALSE, show_column_names = FALSE, 
+ht <- Heatmap(mat, 
+              show_row_names = FALSE, 
+              show_column_names = FALSE, 
               top_annotation = ha, 
               name = "log2 fold change")
 
@@ -170,26 +172,11 @@ width_pixels <- 8 * 600
 height_pixels <- 6 * 600
 
 # output a 600 DPI JPEG
-jpeg("heatmap_nasopharyngeal_600dpi.jpeg", 
-     width = width_pixels, height = height_pixels, 
-     res = 600)
+png("heatmap_nasopharyngeal_600dpi.png", 
+    width = width_pixels, height = height_pixels, 
+    res = 600)
 
-draw(ht, 
-     heatmap_legend_side = "bottom", 
-     annotation_legend_side = "bottom", 
-     merge_legend = TRUE,
-     heatmap_legend_list = list(
-       Legend(title = "log2 fold change", 
-              col_fun = colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
-              direction = "horizontal")
-     ),
-     annotation_legend_list = list(
-       Legend(title = "Condition", 
-              labels = c("Control", "Deficient"), 
-              legend_gp = gpar(fill = c("blue", "red")), 
-              direction = "horizontal")
-     )
-)
+draw(ht)
 
 dev.off()
 
