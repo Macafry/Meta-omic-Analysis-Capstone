@@ -66,7 +66,6 @@ names(all.pbmc.res)[names(all.pbmc.res) == "...1"] <- "genes"
 ```{r}
 
 (common.deseq <- intersect(nasophar.deseq, ctrl.deseq)) 
-(common.limma <- intersect(nasophar.limma, ctrl.limma))
 
 ```
 
@@ -74,14 +73,12 @@ names(all.pbmc.res)[names(all.pbmc.res) == "...1"] <- "genes"
 
 ```{r}
 setdiff(nasophar.deseq, common.deseq)
-setdiff(nasophar.limma, common.limma)
 ```
 
 ### Significant genes for Control group only
 
 ```{r}
 setdiff(ctrl.deseq, common.deseq)
-setdiff(ctrl.limma, common.limma)
 ```
 
 ### Similarity Coefficients for Nasopharyngeal v. PBMC DESeq2 analysis
@@ -94,8 +91,6 @@ length(common.deseq) / length(union(nasophar.deseq, ctrl.deseq))
 #storing DESeq2 coefficient for Monte Carlo verification
 jacc.index <- length(common.deseq) / length(union(nasophar.deseq, ctrl.deseq))
 
-print("LIMMA similarity coefficient for Nasopharyngeal v. PBMC samples")
-length(common.limma) / length(union(nasophar.limma, ctrl.limma))
 
 ```
 
