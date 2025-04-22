@@ -183,64 +183,6 @@ dev.off()
 ```
 
 
-#### Limma Analysis
-
-```{r}
-# Store data in Limma-friendly Data Structure
-dge <- DGEList(counts=counts, group=group) #From edgeR, Computes library size
-
-# filter for genes with significant expression
-counts<-counts[which(rowSums(cpm(counts))>1),] #Gene Filtering #(mask)
-dge <- DGEList(counts=counts, group=group) #Re-compute library size #(filter)
-
-# Trimmed-Mean Normalization of data
-dge <- calcNormFactors(dge) #TMM normalization
-
-# Create design matrix (intercept + indicator variable)
-design<-model.matrix(~group)
-
-# distribution normalizing transformation
-v<-voom(dge, design) #voom transform to calculate weights to eliminate mean-variance #relationship
-#use usual limma pipelines
-
-# fit empirical bayes regression model
-fit<-lmFit(v,design)
-fit<-eBayes(fit)
-
-# organize data by top ranked genes when predicting IDC (coef = col#2 = IDC)
-topTable(fit, coef=ncol(design))
-
-# display top 1000 most significant genes
-datatable(topTable(fit, coef=ncol(design), number=1000))
-
-# store the name of the top 250 most significant genes
-limma250 <- rownames(topTable(fit, coef=ncol(design), number=250))
-```
-
-#### Heatmap of DEGs (limma)
-
-```{r}
-# Make a Heatmap of DEGs
-
-# rownames(topTable(fit, coef=ncol(design), number=50)) # get the name of the top 50 most significant genes
-# as.matrix(assay(se_immunedef,"log_counts_cpm")) # convert log cpm to a matrix structure
-# All together: extract the log cpm of the top 50 genes and store that in a matrix
-mat = as.matrix(assay(se_immunedef,"log_counts_cpm"))[rownames(topTable(fit, coef=ncol(design), number=50)),] # Using first 500 genes to simplify
-
-# normalize data row-wise
-mat = t(scale(t(mat)))
-
-# store IDC into a single-column dataframe
-df=data.frame(Condition=colData(se_immunedef)$Condition) 
-
-# create HeatMap with some annotations
-ha = HeatmapAnnotation(df = df, col = list(Condition=c("Deficient"="Red","Control"="Blue")))
-Heatmap(mat,show_row_names=T,show_column_names = F, top_annotation = ha)
-```
-
-
-
-
 ### Pathway analysis {.tabset}
 
 #### Fetch C7 immune genesets
@@ -285,47 +227,7 @@ gsvaPar <- gsvaParam(assay(se_immunedef,"log_counts_cpm"), C7_pathlist)
 gsvaRes <- gsva(gsvaPar, verbose=FALSE)
 ```
 
-#### Limma Analysis
 
-```{r}
-# Create design matrix (intercept + indicator variable)
-design<-model.matrix(~group)
-
-# fit empirical bayes regression model
-#relationship
-#use usual limma pipelines
-fit<-lmFit(gsvaRes,design)
-fit<-eBayes(fit)
-
-# organize data by top ranked pathways when predicting IDC (coef = col#2 = IDC)
-topTable(fit, coef=ncol(design))
-
-# display top 100 ranked pathways when predicting IDC
-datatable(topTable(fit, coef=ncol(design), number=1000))
-```
-
-#### Heatmap of DEGs (limma)
-
-```{r}
-# rownames(topTable(fit, coef=ncol(design), number=250)) # get the name of the top 250 most significant pathways
-# as.matrix(gsvaRes) # convert enrichment scores to a matrix structure
-# All together: extract the enrichment scores of the top 250 pathways and store that in a matrix
-
-# Make a Heatmap of DEGs
-mat = as.matrix(gsvaRes)[rownames(topTable(fit, coef=ncol(design), number=250)),] # Using first 500 genes to simplify
-
-# normalize data row-wise
-mat = t(scale(t(mat)))
-
-# store IDC into a single-column dataframe
-df=data.frame(Condition=colData(se_immunedef)$Condition) 
-
-# create HeatMap with some annotations
-ha = HeatmapAnnotation(df = df, col = list(Condition=c("Deficient"="Red","Control"="Blue")))
-Heatmap(mat,show_row_names=F,show_column_names = F, top_annotation = ha)
-
-```
- 
 #### EnrichR analysis {.tabset}
 
 ##### DESeq2 Genes {.tabset}
@@ -358,41 +260,12 @@ datatable(enriched$Panther_2016)
 datatable(enriched$Reactome_2016)
 ```
 
-##### Limma Genes {.tabset}
- 
-```{r}
-# based on the results of limma, cross-reference the gene with pathway databases to infer which pathways are the most significant
-enriched <- enrichr(limma250, dbs)
-
-# next code-chunks: display the results of each database cross-referencing
-```
-
-###### Limma WikiPathways
-```{r}
-datatable(enriched$WikiPathways_2016)
-```
-
-###### Limma KEGG
-```{r}
-datatable(enriched$KEGG_2016)
-```
-
-###### Limma Panther
-```{r}
-datatable(enriched$Panther_2016)
-```
-
-###### Limma Reactome
-```{r}
-datatable(enriched$Reactome_2016)
-```
 
 ## Creating CSV for Further Comparative Analysis
 ```{r}
 #combine result lists into dataframe
 
-top.250.results.df <- data.frame(deseq250 = deseq250,
-                           limma250 = limma250) 
+top.250.results.df <- data.frame(deseq250 = deseq250) 
 
 
 # obtain project directory
