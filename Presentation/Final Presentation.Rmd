@@ -25,7 +25,7 @@ Meta-omic analysis of RNA-sequencing data investigating CVID across tissue sampl
 
 -   Organized a complete code-base to support immunological research and publishability
 
-## Context
+**Context**
 
 This analysis is subsequent to work of Dr. Paul Maglione : '*Convergence of cytokine dysregulation and antibody deficiency in common variable immunodeficiency with inflammatory complications*' :
 
@@ -37,8 +37,8 @@ We hope our analysis will contribute as support system and a viewpoint on :
 
 **Locally**
 
--   Building a code repository that is useful both as a tool and evidence supporting publishable results
--   Supporting research of Drs. W. Evan Johnson of Rutgers and P.J. Maglione of Boston U.
+-   Building a code repository that is useful both as a tool and as evidence supporting publishable results
+-   Supporting research of Drs. W. Evan Johnson of Rutgers and Paul J. Maglione of Boston U.
 
 **Globally**
 
@@ -53,8 +53,8 @@ We hope our analysis will contribute as support system and a viewpoint on :
 -   **Jaccard Coefficient** for similarity analysis
 -   **Permutation Tests** for analysis design validation
 -   Bioinformatics pipelines for Differential Expression Analysis and Pathway Analysis *(Summarized Experiment, DESeq2, Limma, and enrichR Libraries)*
--   Introductory Immunology and Clinical Practices
--   Professional Academic Journal Writing
+-   Introductory immunology and clinical practices
+-   Professional academic journal writing
 
 ## Data Science Lifecycle
 
@@ -67,29 +67,27 @@ We hope our analysis will contribute as support system and a viewpoint on :
 
 ## 1. Data acquisition and representativeness
 
-Dr Johnson provided 3 separate data sets directly. These were developed or measured by research teams at Boston University and Rutgers:
+Dr. Johnson provided three separate data sets directly. These were developed or measured by research teams at Boston University and Rutgers:
 
 1.  Nasopharynx sampling of controls and CVID-diagnosed patients
 2.  Peripheral Blood Mononuclear Cell samples (white blood cells found in bloodstream) for controls and CVID
-3.  Nasal and Blood samples from patients either control or living with Tuberculosis
+3.  Nasal and Blood samples from patients living with Tuberculosis and controls
 
-**As with other genomic studies, this analysis was subject to problem of "small N big P"**
+**As with other genomic studies, this analysis was subject to the problem of "small N big P"**
 
-![](figures/Data.png){width=600px style="display: block; margin-left: auto; margin-right: auto;"}
+![](figures/Data.png){width="600px" style="display: block; margin-left: auto; margin-right: auto;"}
 
 ## 2. Data management
 
--   We learned and used the Summarized Experiment (S4) data structure. This packages count data with patient metadata into a single object.
+-   We learned and used the Summarized Experiment (S4) data structure. This structure packages count data with patient metadata into a single object.
 
 -   Patient anonymity was a key priority and maintained throughout.
 
--   Maintaining separate databases while sharing versions through Git  to prevent leaking sensitive data.
+-   Maintained separate databases while sharing versions through Git to prevent leaking sensitive data
 
-
-![](figures/S4.svg){width=500px style="display: block; margin-left: auto; margin-right: auto;"}
+![](figures/S4.svg){width="500px" style="display: block; margin-left: auto; margin-right: auto;"}
 
 ## 3. Data preparation and integration
-
 
 -   General data cleaning *(renaming variables, filtering outliers, splitting datasets)*
 
@@ -97,38 +95,33 @@ Dr Johnson provided 3 separate data sets directly. These were developed or measu
 
 -   Moderate EDA performed to identify and label appropriate treatment groups
 
-
-
-
-
 ## 4. Data analysis
 
 -   Dimensionality reduction by PCA (axial) and UMAP (maintaining distances)
 
--   DESeq2 model deployed to identify significant genes. DESeq uses negative binomial regression to model count data, which estimates variance and accounts for over dispersion. For gene $i$ in sample $j$, the observed count $K_{ij}$ follows a negative binomial distribution with mean $\mu_{ij}$ and gene-specific dispersion parameter $\alpha_i$:
+-   DESeq2 model deployed to identify significant genes. DESeq2 uses negative binomial regression to model count data, which estimates variance and accounts for over-dispersion. For gene $i$ in sample $j$, the observed count $K_{ij}$ follows a negative binomial distribution with mean $\mu_{ij}$ and gene-specific dispersion parameter $\alpha_i$:
 
 $$
 K_{ij} \thicksim NB(\mu_{ij}, \alpha_i)
 $$
 
--   Pathway analysis using *enrichR* provided databases to cross reference the statistically significant genes against known cellular pathways (collection of genes). This enables interpretation of DESeq results using curated biological knowledge.
+-   Pathway analysis using *enrichR* provided databases to cross-reference the statistically significant genes against known cellular pathways (collection of genes). This enables interpretation of DESeq results using curated biological knowledge.
 
--   Comparative analysis using **Jaccard coefficient** statistic and **permutation tests** to validate the design of our analysis.
+-   Comparative analysis using **Jaccard coefficient** statistic and **permutation tests** to validate the design of our analysis
 
 ## 5. Model development/deployment
 
-Model development wasn't the goal of this project. While we used DESeq models, they were used for inference.
+Model development wasn't a central concern of this project. While we used DESeq models, they were used for inference.
 
-**Theoretical model development:** 
+**Theoretical model development might involve:**
 
--   Leverage the significant genes to create a classification model to predict whether a patient has CVID or not
+-   Leveraging the significant genes to create a classification model to predict whether a patient has CVID or not
 
--   Choose among the multitude of classification models *(Naive Bayes seems like a good candidate)*
+-   Choosing among the multitude of classification models *(Naive Bayes seems like a good candidate)*
 
--   Train and test the model
+-   Training and testing the model
 
--   Diagnose the model using accuracy, confusion matrix (and derivatives), and kappa
-
+-   Evaluating the model using accuracy, confusion matrix (and its derivatives), and Cohen's Kappa
 
 ## 6. Communication of Knowledge Obtained from Data
 
@@ -140,14 +133,14 @@ Model development wasn't the goal of this project. While we used DESeq models, t
 
 -   Journal-appropriate writing, in particular for *Methods* section
 
-![](figures/umap_plot_600dpi.jpeg){width=600px style="display: block; margin-left: auto; margin-right: auto;"}
+![](figures/umap_plot_600dpi.jpeg){width="600px" style="display: block; margin-left: auto; margin-right: auto;"}
 
 ## Non-technical Discussion
 
-*More than one of legal, professional, ethical, security, or social issues were discussed in depth:*
+*Legal, professional, ethical, security, and social issues were discussed in depth:*
 
-1.  Samples are described with metadata for statistical analysis, but must be separately analyzed for discretion around patient anonymity
-2.  The social **ethics of designations and sensitive usage** were discussed: Ugandan data included **patients living with HIV**. Diagnosis of Tuberculosis may warrant similar sensitivities.
+1.  Samples are described with metadata for statistical analysis, but must be separately analyzed for discretion around patient anonymity.
+2.  The social **ethics of designations and sensitive usage** were discussed: samples taken in Uganda involved **patients living with HIV**. Consideration of care and personal ethics and sensitivies is important in designating these subjects. Diagnosis of Tuberculosis may warrant similar sensitivities.
 3.  Presently **evolving landscape of clinical research and public funding** were discussed with Dr. Johnson, including professional practices and current risks
 
 ## Development Methodology
@@ -156,34 +149,31 @@ Model development wasn't the goal of this project. While we used DESeq models, t
 ::: column
 ***Methodology***
 
--   Worked: 
-    - Version control and colaboration through GitHub
-    - Regular meetings with our stake holder (Dr Johnson)
-    - Mostly organized file structure
-
--   Didn't Work: 
-    - Lack of a consistent coding syntax resulting in shifting styles
-    - Duplicate files among several folders
-    
+-   Worked:
+    -   Version control and collaboration through GitHub
+    -   Regular meetings with our stake holder (Dr. Johnson)
+    -   Mostly organized file structure
+-   Didn't Work:
+    -   Lack of a consistent coding syntax resulting in shifting styles
+    -   Duplicate files among several folders
 :::
 
 ::: column
 ***Teamwork***
 
--   Worked: 
-    - Different skill-sets
-    - Largely clear task division
-    - Multi-channel communication
-
--   Didn't Work: 
-    - Occasional time conflicts from multiple schedules
-    - Skill-set differentials
+-   Worked:
+    -   Different skill-sets
+    -   Largely clear task division
+    -   Multi-channel communication
+-   Didn't Work:
+    -   Occasional time conflicts from multiple schedules
+    -   Skill-set differentials
 :::
 :::::
 
 ## Outside Classes
 
-What math and Data Science classes were used in the project?
+We relied on many courses central to and supportive of the Data Science degree track:
 
 ::::: columns
 ::: column
@@ -208,20 +198,20 @@ What math and Data Science classes were used in the project?
 
 ## Conclusion
 
-**Stakeholder Communication:** 
+**Stakeholder Communication:**
 
--   Gained experience in presenting progress, gathering feedback, and making changes to our work. 
+-   Gained experience in presenting progress, gathering feedback, and making changes to our work
 
 **New Industry & Tools:**
 
--   Developed familiarity with common bioinformatics workflows and the unique challenges of clinical genomic data.
+-   Developed familiarity with common bioinformatics workflows and the unique challenges of clinical genomic data
 
--   Gained hands-on experience with tools like DESeq2, enrichR, and SummarizedExperiment.
+-   Gained hands-on experience with tools like DESeq2, enrichR, and SummarizedExperiment
 
 **Impact:**
 
--   Contributed with ongoing research of complex diseases like CVID, and demonstrate the potential of data science to inform clinical discovery.
-
+-   Contributed to ongoing research of complex diseases like CVID, and demonstrated the potential of data science to inform clinical discovery
 
 ## Thank you
-![](figures/thank-you.jpg){width=1000px style="display: block; margin-left: auto; margin-right: auto;"}
+
+![](figures/thank-you.jpg){width="1000px" style="display: block; margin-left: auto; margin-right: auto;"}
