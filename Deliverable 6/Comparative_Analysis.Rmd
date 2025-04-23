@@ -195,7 +195,7 @@ commonality.coefficient <- function(sample1, sample2) {
 }
 
 # number of simulations
-num.sims <- 10#0000
+num.sims <- 100000
 
 # number of genes to sample
 sample.size <- 250
@@ -260,7 +260,7 @@ cols <- c("up"="slategray2", "down"="orange2", "ns"="grey50")
 sizes <- c("up"=2, "down"=2, "ns"=1)
 alphas <- c("up"=1, "down"=1, "ns"=0.5)
 
-all.pbmc.res |> 
+volcano_plot_pbmc <- all.pbmc.res |> 
   ggplot(aes(x=log2FoldChange,
              y=-log10(padj),
              fill=gene_type,
@@ -278,7 +278,19 @@ all.pbmc.res |>
   scale_x_continuous(breaks=c(seq(-10,10,2)),
                      limits=c(-10,10)
                      )
-  
+
+width_pixels <- 8 * 600
+height_pixels <- 6 * 600
+
+# output a 600 DPI PNG into working directory
+png("volcano_pbmc_600dpi.png", 
+    width = width_pixels, height = height_pixels, 
+    res = 600)
+
+print(volcano_plot_pbmc)
+
+dev.off()  
+
 ```
 
 
@@ -300,7 +312,7 @@ cols <- c("up"="slategray2", "down"="orange2", "ns"="grey50")
 sizes <- c("up"=2, "down"=2, "ns"=1)
 alphas <- c("up"=1, "down"=1, "ns"=0.5)
 
-all.nasophar.res |> 
+volcano_plot_nasophar <- all.nasophar.res |> 
   ggplot(aes(x=log2FoldChange,
              y=-log10(padj),
              fill=gene_type,
@@ -319,6 +331,17 @@ all.nasophar.res |>
                      limits=c(-10,10)
                      )
 
+width_pixels <- 8 * 600
+height_pixels <- 6 * 600
+
+# output a 600 DPI PNG into working directory
+png("volcano_nasophar_600dpi.png", 
+    width = width_pixels, height = height_pixels, 
+    res = 600)
+
+print(volcano_plot_nasophar)
+
+dev.off() 
   
 ```
 
