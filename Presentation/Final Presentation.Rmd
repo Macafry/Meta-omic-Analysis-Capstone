@@ -123,6 +123,8 @@ $$
 
 -   Rslidy for clear and concise presentation, transmission
 
+-   Journal-appropriate writing, in particular for *Methods* section
+
 ## Non-technical Discussion
 
 *More than one of legal, professional, ethical, security, or social issues were discussed in depth:*
