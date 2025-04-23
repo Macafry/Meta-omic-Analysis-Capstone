@@ -19,9 +19,9 @@ Meta-omic analysis of RNA-sequencing data investigating CVID across tissue sampl
 
 **Mission**
 
--   Deployed bioinformatic models to analyze genetic count data
+-   Deployed bioinformatic models to analyze diseases using genomic expression data
 
--   Focussed on CVID: a clinically defined disease, but which is molecularly not well-defined
+-   Focussed on **CVID**: a clinically defined disease, but which is molecularly not well-defined
 
 -   Organized a complete code-base to support immunological research and publishability
 
@@ -50,11 +50,11 @@ We hope our analysis will contribute as support system and a viewpoint on :
 
 *More than 5 topics outside of the curriculum were discussed or needed for project completion:*
 
--   Jaccard Coefficient
+-   **Jaccard Coefficient** for similarity analysis
 -   **Permutation Tests** for analysis design validation
 -   Bioinformatics pipelines for Differential Expression Analysis and Pathway Analysis *(Summarized Experiment, DESeq2, Limma, and enrichR Libraries)*
 -   Introductory Immunology and Clinical Practices
--   Professional Journal Writing
+-   Professional Academic Journal Writing
 
 ## Data Science Lifecycle
 
@@ -75,45 +75,60 @@ Dr Johnson provided 3 separate data sets directly. These were developed or measu
 
 **As with other genomic studies, this analysis was subject to problem of "small N big P"**
 
+![](figures/Data.png){width=600px style="display: block; margin-left: auto; margin-right: auto;"}
+
 ## 2. Data management
 
--   We learned and used the Summarized Experiment (S4) data structure
+-   We learned and used the Summarized Experiment (S4) data structure. This packages count data with patient metadata into a single object.
 
--   Patient anonymity was maintained throughout
+-   Patient anonymity was a key priority and maintained throughout.
 
--   Maintaining separate databases while sharing versions through Git
+-   Maintaining separate databases while sharing versions through Git  to prevent leaking sensitive data.
+
+
+![](figures/S4.svg){width=500px style="display: block; margin-left: auto; margin-right: auto;"}
 
 ## 3. Data preparation and integration
 
+
+-   General data cleaning *(renaming variables, filtering outliers, splitting datasets)*
+
+-   Augmented the data by converting gene expression counts into: counts per million (CPM), log-counts, and log-CPM
+
 -   Moderate EDA performed to identify and label appropriate treatment groups
 
--   S4 Assays : simple list-like objects used
 
--   Use of online pathway libraries (*Ian: please give some technical elaboration /correct / or remove)*
+
+
 
 ## 4. Data analysis
 
 -   Dimensionality reduction by PCA (axial) and UMAP (maintaining distances)
 
--   DESeq2 model deployed, to estimate variance and account for overdispersion: gene $i$ in sample $j$ ($K_{ij}$) where $\alpha_i$ is dispersion parameter:
+-   DESeq2 model deployed to identify significant genes. DESeq uses negative binomial regression to model count data, which estimates variance and accounts for over dispersion. For gene $i$ in sample $j$, the observed count $K_{ij}$ follows a negative binomial distribution with mean $\mu_{ij}$ and gene-specific dispersion parameter $\alpha_i$:
 
 $$
 K_{ij} \thicksim NB(\mu_{ij}, \alpha_i)
 $$
 
--   Pathway analysis (*Ian: please elaborate)*
+-   Pathway analysis using *enrichR* provided databases to cross reference the statistically significant genes against known cellular pathways (collection of genes). This enables interpretation of DESeq results using curated biological knowledge.
 
--   Comparative analysis using **Jaccard coefficient** statistic and **permutation tests**
+-   Comparative analysis using **Jaccard coefficient** statistic and **permutation tests** to validate the design of our analysis.
 
 ## 5. Model development/deployment
 
--   Bioinformatic models with broad, longstanding use
+Model development wasn't the goal of this project. While we used DESeq models, they were used for inference.
 
--   ...
+**Theoretical model development:** 
 
--   Adjusted analysis for treatment group masking, eventually LPS-stimulation became superfluous
+-   Leverage the significant genes to create a classification model to predict whether a patient has CVID or not
 
--   ...
+-   Choose among the multitude of classification models *(Naive Bayes seems like a good candidate)*
+
+-   Train and test the model
+
+-   Diagnose the model using accuracy, confusion matrix (and derivatives), and kappa
+
 
 ## 6. Communication of Knowledge Obtained from Data
 
@@ -121,9 +136,11 @@ $$
 
 -   Adjusting figures for publication-readiness
 
--   Rslidy for clear and concise presentation, transmission
+-   Rslidy for clear and concise presentation, transmission of results
 
 -   Journal-appropriate writing, in particular for *Methods* section
+
+![](figures/umap_plot_600dpi.jpeg){width=600px style="display: block; margin-left: auto; margin-right: auto;"}
 
 ## Non-technical Discussion
 
@@ -135,17 +152,34 @@ $$
 
 ## Development Methodology
 
+::::: columns
+::: column
 ***Methodology***
 
--   Worked: \# *I don't know what to say... Any thoughts Ian ?*
+-   Worked: 
+    - Version control and colaboration through GitHub
+    - Regular meetings with our stake holder (Dr Johnson)
+    - Mostly organized file structure
 
--   Didn't Work: inconsistent or shifting coding syntax \# *Please add something...*
+-   Didn't Work: 
+    - Lack of a consistent coding syntax resulting in shifting styles
+    - Duplicate files among several folders
+    
+:::
 
+::: column
 ***Teamwork***
 
--   Worked: multi-channel access and version control; different skill-sets; largely clear task division
+-   Worked: 
+    - Different skill-sets
+    - Largely clear task division
+    - Multi-channel communication
 
--   Didn't Work: occasional time conflicts from multiple schedules; skill-set differentials
+-   Didn't Work: 
+    - Occasional time conflicts from multiple schedules
+    - Skill-set differentials
+:::
+:::::
 
 ## Outside Classes
 
@@ -174,4 +208,20 @@ What math and Data Science classes were used in the project?
 
 ## Conclusion
 
+**Stakeholder Communication:** 
+
+-   Gained experience in presenting progress, gathering feedback, and making changes to our work. 
+
+**New Industry & Tools:**
+
+-   Developed familiarity with common bioinformatics workflows and the unique challenges of clinical genomic data.
+
+-   Gained hands-on experience with tools like DESeq2, enrichR, and SummarizedExperiment.
+
+**Impact:**
+
+-   Contributed with ongoing research of complex diseases like CVID, and demonstrate the potential of data science to inform clinical discovery.
+
+
 ## Thank you
+![](figures/thank-you.jpg){width=1000px style="display: block; margin-left: auto; margin-right: auto;"}
