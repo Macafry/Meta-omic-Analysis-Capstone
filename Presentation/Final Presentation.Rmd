@@ -11,8 +11,6 @@ knitr::opts_chunk$set(echo = FALSE)
 
 ## Introduction
 
-Meta-omic analysis of RNA-sequencing data investigating CVID across tissue samples
-
 **Stakeholder**
 
 -   Worked with W. Evan Johnson of Rutgers University
@@ -35,6 +33,10 @@ This analysis is subsequent to work of Dr. Paul Maglione : '*Convergence of cyto
 
 We hope our analysis will contribute as support system and a viewpoint on :
 
+<div style="display: flex; gap: 0.5em;">
+
+<div style="flex: 3;">
+
 **Locally**
 
 -   Building a code repository that is useful both as a tool and as evidence supporting publishable results
@@ -46,9 +48,17 @@ We hope our analysis will contribute as support system and a viewpoint on :
 
 -   Supporting the immunological research community and hopefully providing a data point one day improving care
 
-## Continuing Professional Development
+</div>
 
-*More than 5 topics outside of the curriculum were discussed or needed for project completion:*
+<div style="flex: 1;">
+
+![](figures/immunodef.png){width="400px" style="display: block; margin-left: auto; margin-right: auto;"}
+
+</div>
+
+</div>
+
+## Continuing Professional Development
 
 -   **Jaccard Coefficient** for similarity analysis
 -   **Permutation Tests** for analysis design validation
@@ -56,14 +66,15 @@ We hope our analysis will contribute as support system and a viewpoint on :
 -   Introductory immunology and clinical practices
 -   Professional academic journal writing
 
+![](figures/professional_development.jpg){width="600px" style="display: block; margin-left: auto; margin-right: auto;"}
+
+
 ## Data Science Lifecycle
 
-1.  Data acquisition and representativeness
-2.  Data management
-3.  Data preparation and integration
-4.  Data analysis
-5.  Model development and deployment
-6.  Visualization and communication of the knowledge obtained from the data
+
+![](figures/Lifecycle3.png){width="700px" style="display: block; margin-left: auto; margin-right: auto;"}
+
+
 
 ## 1. Data acquisition and representativeness
 
@@ -95,6 +106,10 @@ Dr. Johnson provided three separate data sets directly. These were developed or 
 
 -   Moderate EDA performed to identify and label appropriate treatment groups
 
+<br><br>
+
+![](figures/Data Cleaning.png){width="600px" style="display: block; margin-left: auto; margin-right: auto;"}
+
 ## 4. Data analysis
 
 -   Dimensionality reduction by PCA (axial) and UMAP (maintaining distances)
@@ -123,6 +138,8 @@ Model development wasn't a central concern of this project. While we used DESeq 
 
 -   Evaluating the model using accuracy, confusion matrix (and its derivatives), and Cohen's Kappa
 
+![](figures/CM.png){width="550px" style="display: block; margin-left: auto; margin-right: auto;"}
+
 ## 6. Communication of Knowledge Obtained from Data
 
 -   Creation of subject appropriate statistical plots : UMAP plots, Heatmaps, Volcano plots
@@ -133,7 +150,7 @@ Model development wasn't a central concern of this project. While we used DESeq 
 
 -   Journal-appropriate writing, in particular for *Methods* section
 
-![](figures/umap_plot_600dpi.jpeg){width="600px" style="display: block; margin-left: auto; margin-right: auto;"}
+![](figures/volcano_nasophar_600dpi.png){width="500px" style="display: block; margin-left: auto; margin-right: auto;"}
 
 ## Non-technical Discussion
 
@@ -143,8 +160,9 @@ Model development wasn't a central concern of this project. While we used DESeq 
 2.  The social **ethics of designations and sensitive usage** were discussed: samples taken in Uganda involved **patients living with HIV**. Consideration of care and personal ethics and sensitivies is important in designating these subjects. Diagnosis of Tuberculosis may warrant similar sensitivities.
 3.  Presently **evolving landscape of clinical research and public funding** were discussed with Dr. Johnson, including professional practices and current risks
 
-## Development Methodology
+![](figures/context.jpg){width="600px" style="display: block; margin-left: auto; margin-right: auto;"}
 
+## Development Methodology
 ::::: columns
 ::: column
 ***Methodology***
@@ -170,6 +188,8 @@ Model development wasn't a central concern of this project. While we used DESeq 
     -   Skill-set differentials
 :::
 :::::
+![](figures/github.png){width="400px" style="display: block; margin-left: auto; margin-right: auto;"}
+
 
 ## Outside Classes
 
@@ -195,8 +215,13 @@ We relied on many courses central to and supportive of the Data Science degree t
 -   BIOL 3060: Genetics background
 :::
 :::::
+![](figures/Courses.png){width="600px" style="display: block; margin-left: auto; margin-right: auto;"}
 
 ## Conclusion
+
+<div style="display: flex; gap: 0.5em;">
+
+<div style="flex: 3;">
 
 **Stakeholder Communication:**
 
@@ -211,6 +236,18 @@ We relied on many courses central to and supportive of the Data Science degree t
 **Impact:**
 
 -   Contributed to ongoing research of complex diseases like CVID, and demonstrated the potential of data science to inform clinical discovery
+
+</div>
+
+<div style="flex: 1;">
+
+![](figures/research.png){width="400px" style="display: block; margin-left: auto; margin-right: auto;"}
+
+![](figures/teamworkpng.png){width="400px" style="display: block; margin-left: auto; margin-right: auto;"}
+
+</div>
+
+</div>
 
 ## Thank you
 
